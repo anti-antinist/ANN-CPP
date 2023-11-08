@@ -1,6 +1,19 @@
 #pragma once
 #include<vector>
 
+struct NeuronID {
+    int l = 0;
+    int n = 0;
+    NeuronID(int l, int n)
+        : l(l), n(n) {};
+    NeuronID() = default;
+    bool operator==(NeuronID n) {
+        if (n.l == this->l && n.n == this->n)
+            return true;
+        return false;
+    }
+};
+
 template<typename type>
 class ANN {
   private:
