@@ -124,6 +124,27 @@ type ANN<type>::costavg(std::vector<type> &target) {
     return cost;
 }
 
+template<typename type>
+std::vector<type> ANN<type>::forwardpropagate(std::vector<type> &input) {
+    assert(input.size() == layers[0].neurons.size());
+    for (auto &n : layers[0].neurons) {
+        n.activation = input[n.currentID] + n.bias;
+    }
+    for (int i = 1; i < layers.size() - 1; i++) {
+        for (auto &n : layers[i].neurons) {
+            n.calculateActivation(*actfuncHID);
+        }
+    }
+    for (auto &n : layers.back().neurons) {
+        n.calculateActivation(*actfuncOUT);
+    }
+    std::vector<type> out;
+    for (auto &n : layers.back().neurons) {
+        out.push_back(n.activation);
+    }
+    return out;
+}
+
 template<typename type> 
 struct ANN<type>::NEURON {
     type bias = 0.0f;
