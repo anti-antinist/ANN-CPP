@@ -84,6 +84,28 @@ ANN<type>::NEURON::~NEURON() {
     previouslayer = nullptr;
 }
 
+template<typename type> 
+void ANN<type>::NEURON::calculateActivation(type (&actfunc)(type)) {
+    activation = 0.0f;
+    for (auto &i : previouslayer->neurons) {
+        activation += i.outweights[currentID] * i.activation + bias;
+    }
+    for (auto &r : resWeights) {
+        activation += ANN<type>::IDtoN(r.from).activation * r.weight + bias;
+    }
+    activation = actfunc(activation);
+}
+
+template<typename type> 
+void ANN<type>::NEURON::initializeweights(LAYER *next) {
+    srand(std::time(NULL));
+    outweights.resize(next->neurons.size(), 1.0f);
+    for (type &i : outweights)
+        i = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
+    bias = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
+    next = nullptr;
+}
+
 template<typename type>
 void ANN<type>::LAYER::init(int n, LAYER *prev) {
     neurons.resize(n, NEURON(*prev));
