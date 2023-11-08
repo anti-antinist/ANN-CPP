@@ -73,6 +73,17 @@ struct ANN<type>::LAYER {
     ~LAYER();
 };
 
+template<typename type> 
+ANN<type>::NEURON::NEURON(LAYER &prev) {
+    previouslayer = &prev;
+}
+
+template<typename type> 
+ANN<type>::NEURON::~NEURON() {
+    outweights.clear();
+    previouslayer = nullptr;
+}
+
 template<typename type>
 void ANN<type>::LAYER::init(int n, LAYER *prev) {
     neurons.resize(n, NEURON(*prev));
