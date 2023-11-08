@@ -2,7 +2,7 @@
 #include<vector>
 #include<string>
 #include<fstream>
-#include<ctime.h>
+#include<ctime>
 
 struct NeuronID {
     int l = 0;
@@ -312,6 +312,11 @@ void ANN<type>::serializebin(std::string filename) {
         }
     }
     file.close();
+}
+
+template<typename type> 
+void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights) {
+    initializeshit(layern, ResWeights);
 }
 
 template<typename type> 
