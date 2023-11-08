@@ -79,3 +79,9 @@ struct ANN<type>::ResidualWeight {
     type weight = 0.0f;
     ResidualWeight(NeuronID fromp, type weightp);
 };
+
+template<typename type> 
+ANN<type>::ResidualWeight::ResidualWeight(NeuronID fromp, type weightp) {
+    from = fromp;
+    weight = weightp;
+}
