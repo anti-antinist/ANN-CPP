@@ -50,3 +50,12 @@ struct ANN<type>::NEURON {
     void calculateActivation(type (&actfunc)(type));
     void initializeweights(LAYER *next);
 };
+
+template<typename type> 
+struct ANN<type>::LAYER {
+  public:
+
+    std::vector<NEURON> neurons;
+    void init(int n, LAYER *prev);
+    ~LAYER();
+};
