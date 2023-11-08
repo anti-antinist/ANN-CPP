@@ -65,15 +65,6 @@ struct ANN<type>::NEURON {
 };
 
 template<typename type> 
-struct ANN<type>::LAYER {
-  public:
-
-    std::vector<NEURON> neurons;
-    void init(int n, LAYER *prev);
-    ~LAYER();
-};
-
-template<typename type> 
 ANN<type>::NEURON::NEURON(LAYER &prev) {
     previouslayer = &prev;
 }
@@ -95,6 +86,16 @@ void ANN<type>::NEURON::calculateActivation(type (&actfunc)(type)) {
     }
     activation = actfunc(activation);
 }
+
+
+template<typename type> 
+struct ANN<type>::LAYER {
+  public:
+
+    std::vector<NEURON> neurons;
+    void init(int n, LAYER *prev);
+    ~LAYER();
+};
 
 template<typename type> 
 void ANN<type>::NEURON::initializeweights(LAYER *next) {
