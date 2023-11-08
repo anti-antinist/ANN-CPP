@@ -318,7 +318,165 @@ template<typename type>
 void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights) {
     initializeshit(layern, ResWeights);
 }
+template<typename type>
+template<typename lr_type>
+void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety) {
+    forwardpropagate(input);
+    type jump_slowdown;
 
+    std::vector<type> delta = costvec(target, layers.size() - 1);
+    std::vector<std::pair<ResidualWeight &, type>> res_r;
+    for (int n = 0; n < (*(layers.end() - 1)).neurons.size(); n++) {
+        if (learn_rate_safety) {
+            jump_slowdown = std::abs(target[n] - (*(layers.end() - 1)).neurons[n].activation);
+        }
+        for (int o = 0; o < (*(layers.end() - 1)).neurons[n].outweights.size(); o++) {
+            (*(layers.end() - 1)).neurons[n].outweights[o] -= learn_rate * jump_slowdown * (*(layers.end() - 1)).neurons[n].activation * delta[o];
+        }
+    }
+    for (int b = 0; b < (layers.back()).neurons.size(); b++) {
+        if (learn_rate_safety) {
+            jump_slowdown = 1 / std::abs(target[b] - (*(layers.end() - 1)).neurons[b].activation);
+        }
+        layers.back().neurons[b].bias -= delta[b] * learn_rate;
+    }
+    for (int n = 0; n < layers.back().neurons.size(); n++) {
+        for (int r = 0; r < layers.back().neurons[n].resWeights.size(); r++) {
+            res_r.push_back(std::pair<ResidualWeight &, type>(layers.back().neurons[n].resWeights[r], target[n]));
+        }
+    }
+    for (int l = layers.size() - 2; l >= 0; l--) {
+        std::vector<type> newtarget(layers[l].neurons.size(), 0.0f);
+        for (int n = 0; n < newtarget.size(); n++) {
+            for (int o = 0; o < layers[l].neurons[n].outweights.size(); o++) {
+                if (layers[l].neurons[n].outweights[o] != 0) {
+                    newtarget[n] += (target[o] - layers[l + 1].neurons[o].bias) / layers[l].neurons[n].outweights[o];
+                }
+            }
+        }
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            for (int r = 0; r < layers[l].neurons[n].resWeights.size(); r++) {
+                res_r.push_back(std::pair<ResidualWeight &, type>(layers[l].neurons[n].resWeights[r], target[n]));
+            }
+        }
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            for (int r = 0; r < res_r.size(); r++) {
+                if (res_r[r].first.from == NeuronID(l, n)) {
+                    if (res_r[r].first.weight != 0) {
+                        newtarget[n] += (res_r[r].second - IDtoN(res_r[r].first.from).bias) / res_r[r].first.weight;
+                    }
+                }
+            }
+        }
+        std::vector<type> delta = costvec(newtarget, l);
+        if (l > 0) {
+            for (int n = 0; n < layers[l].neurons.size(); n++) {
+                for (int r = 0; r < layers[l].neurons[n].resWeights.size(); r++) {
+                    layers[l].neurons[n].resWeights[r].weight -= learn_rate * jump_slowdown * IDtoN(layers[l].neurons[n].resWeights[r].from).activation * delta[n];
+                }
+            }
+            for (int n = 0; n < layers[l - 1].neurons.size(); n++) {
+                for (int o = 0; o < layers[l - 1].neurons[n].outweights.size(); o++) {
+                    if (learn_rate_safety) {
+                        jump_slowdown = 1 / std::abs(newtarget[n] - layers[l - 1].neurons[n].activation);
+                    }
+                    layers[l - 1].neurons[n].outweights[o] -= learn_rate * jump_slowdown * layers[l - 1].neurons[n].activation * delta[o];
+                }
+            }
+        }
+        for (int b = 0; b < layers[l].neurons.size(); b++) {
+            if (learn_rate_safety) {
+                jump_slowdown = 1 / std::abs(newtarget[b] - layers[l + 1].neurons[b].activation);
+            }
+            layers[l].neurons[b].bias -= learn_rate * jump_slowdown * delta[b];
+        }
+        target.resize(newtarget.size(), 0.0f);
+        target = newtarget;
+    }
+}
+
+template<typename type> 
+template<typename lr_type> 
+void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::vector<std::vector<type>> &target, lr_type learn_rate, bool learn_rate_safety) {
+    assert(target.size() == input.size());
+    type jump_slowdown;
+    std::vector<type> delta, single_target(target[0].size(), 0.0f);
+    std::vector<std::pair<ResidualWeight &, type>> res_r;
+    for (int i = 0; i < input.size(); i++) {
+        forwardpropagate(input[i]);
+        delta = costvec(target[i], layers.size() - 1);
+        for (int t = 0; t < target[i].size(); t++) {
+            single_target[t] += target[i][t] / target.size();
+        }
+    }
+    for (int n = 0; n < (*(layers.end() - 1)).neurons.size(); n++) {
+        if (learn_rate_safety) {
+            jump_slowdown = std::abs(single_target[n] - (*(layers.end() - 1)).neurons[n].activation);
+        }
+        for (int o = 0; o < (*(layers.end() - 1)).neurons[n].outweights.size(); o++) {
+            (*(layers.end() - 1)).neurons[n].outweights[o] -= learn_rate * jump_slowdown * (*(layers.end() - 1)).neurons[n].activation * delta[o];
+        }
+    }
+    for (int b = 0; b < (layers.back()).neurons.size(); b++) {
+        if (learn_rate_safety) {
+            jump_slowdown = 1 / std::abs(single_target[b] - (*(layers.end() - 1)).neurons[b].activation);
+        }
+        layers.back().neurons[b].bias -= delta[b] * learn_rate;
+    }
+    for (int n = 0; n < layers.back().neurons.size(); n++) {
+        for (int r = 0; r < layers.back().neurons[n].resWeights.size(); r++) {
+            res_r.push_back(std::pair<ResidualWeight &, type>(layers.back().neurons[n].resWeights[r], target[n]));
+        }
+    }
+    for (int l = layers.size() - 2; l >= 0; l--) {
+        std::vector<type> newtarget(layers[l].neurons.size(), 0.0f);
+        for (int n = 0; n < newtarget.size(); n++) {
+            for (int o = 0; o < layers[l].neurons[n].outweights.size(); o++) {
+                if (layers[l].neurons[n].outweights[o] != 0) {
+                    newtarget[n] += (single_target[o] - layers[l + 1].neurons[o].bias) / layers[l].neurons[n].outweights[o];
+                }
+            }
+        }
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            for (int r = 0; r < layers[l].neurons[n].resWeights.size(); r++) {
+                res_r.push_back(std::pair<ResidualWeight &, type>(layers[l].neurons[n].resWeights[r], target[n]));
+            }
+        }
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            for (int r = 0; r < res_r.size(); r++) {
+                if (res_r[r].first.from == NeuronID(l, n)) {
+                    if (res_r[r].first.weight != 0) {
+                        newtarget[n] += (res_r[r].second - IDtoN(res_r[r].first.from).bias) / res_r[r].first.weight;
+                    }
+                }
+            }
+        }
+        std::vector<type> delta = costvec(newtarget, l);
+        if (l > 0) {
+            for (int n = 0; n < layers[l].neurons.size(); n++) {
+                for (int r = 0; r < layers[l].neurons[n].resWeights.size(); r++) {
+                    layers[l].neurons[n].resWeights[r].weight -= learn_rate * jump_slowdown * IDtoN(layers[l].neurons[n].resWeights[r].from).activation * delta[n];
+                }
+            }
+            for (int n = 0; n < layers[l - 1].neurons.size(); n++) {
+                for (int o = 0; o < layers[l - 1].neurons[n].outweights.size(); o++) {
+                    if (learn_rate_safety) {
+                        jump_slowdown = 1 / std::abs(newtarget[n] - layers[l - 1].neurons[n].activation);
+                    }
+                    layers[l - 1].neurons[n].outweights[o] -= learn_rate * jump_slowdown * layers[l - 1].neurons[n].activation * delta[o];
+                }
+            }
+        }
+        for (int b = 0; b < layers[l].neurons.size(); b++) {
+            if (learn_rate_safety) {
+                jump_slowdown = 1 / std::abs(newtarget[b] - layers[l + 1].neurons[b].activation);
+            }
+            layers[l].neurons[b].bias -= learn_rate * jump_slowdown * delta[b];
+        }
+        single_target.resize(newtarget.size(), 0.0f);
+        single_target = newtarget;
+    }
+}
 
 template<typename type> 
 struct ANN<type>::NEURON {
