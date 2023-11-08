@@ -49,6 +49,31 @@ class ANN {
     template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
 
+template<typename type>
+ANN<type>::ANN(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)) {
+    initializeshit(layern, ResWeights);
+    actfuncHID = actfuncHIDp;
+    actfuncOUT = actfuncOUTp;
+}
+
+template<typename type>
+ANN<type>::ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)) {
+    if (isBIN) {
+        deserializebin(filename);
+    }
+    else {
+        deserializecsv(filename);
+    }
+    actfuncHID = actfuncHIDp;
+    actfuncOUT = actfuncOUTp;
+}
+
+template<typename type>
+ANN<type>::~ANN() {
+    layers.clear();
+}
+
+
 template<typename type> 
 struct ANN<type>::NEURON {
     type bias = 0.0f;
@@ -86,7 +111,6 @@ void ANN<type>::NEURON::calculateActivation(type (&actfunc)(type)) {
     }
     activation = actfunc(activation);
 }
-
 
 template<typename type> 
 struct ANN<type>::LAYER {
