@@ -319,10 +319,6 @@ void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<Ne
     initializeshit(layern, ResWeights);
 }
 
-template<typename type> 
-void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights) {
-    initializeshit(layern, ResWeights);
-}
 
 template<typename type> 
 struct ANN<type>::NEURON {
