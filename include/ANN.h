@@ -479,6 +479,14 @@ void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::v
 }
 
 template<typename type> 
+void ANN<type>::SetResidualWeight(NeuronID from, NeuronID to, type weight) {
+    assert(from.l < layers.size() || to.l < layers.size());
+    assert(from.n < layers[from.l].neurons.size() || to.n < layers[to.l].neurons.size());
+    assert(from.l < to.l);
+    layers[to.l].neurons[to.n].resWeights.push_back(ResidualWeight(from, weight));
+}
+
+template<typename type> 
 struct ANN<type>::NEURON {
     type bias = 0.0f;
     int currentID = 0;
