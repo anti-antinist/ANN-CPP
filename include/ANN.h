@@ -145,6 +145,173 @@ std::vector<type> ANN<type>::forwardpropagate(std::vector<type> &input) {
     return out;
 }
 
+template<typename type>
+void ANN<type>::deserializecsv(std::string filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        return;
+    }
+    std::string line;
+    std::stringstream input;
+    std::vector<int> layerinp;
+    int ln = 0;
+    int nn = 0;
+    std::string tmp;
+    std::getline(file, line);
+    input.str(line);
+    while (std::getline(input, tmp, ',')) {
+        layerinp.push_back(std::atoi((tmp.c_str())));
+    }
+    int l = 0, n = 0;
+    initializeshit(layerinp, std::vector<std::pair<NeuronID, NeuronID>> {});
+    while (std::getline(file, line)) {
+        std::stringstream().swap(input);
+        input << line;
+        std::getline(input, tmp, ',');
+        l = atoi(tmp.c_str());
+        std::getline(input, tmp, ',');
+        n = atoi(tmp.c_str());
+        for (auto &i : layers[l].neurons[n].outweights) {
+            std::getline(input, tmp, ',');
+            i = atof(tmp.c_str());
+        }
+        std::getline(input, tmp, ',');
+        layers[l].neurons[n].bias = atof(tmp.c_str());
+        int s_of_r = 0;
+        std::getline(input, tmp, ',');
+        s_of_r = atoi(tmp.c_str());
+        for (int r = 0; r < s_of_r; r++) {
+            int lf = 0, nf = 0;
+            std::getline(input, tmp, ',');
+            lf = atof(tmp.c_str());
+            std::getline(input, tmp, ',');
+            nf = atof(tmp.c_str());
+            type w = 0.0f;
+            std::getline(input, tmp, ',');
+            w = atof(tmp.c_str());
+            layers[l].neurons[n].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
+        }
+    }
+    input.clear();
+    file.close();
+};
+
+template<typename type>
+void ANN<type>::serializecsv(std::string filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        return;
+    }
+    std::string line;
+    for (int i = 0; i < layers.size(); i++)
+        line += std::to_string(layers[i].neurons.size()) + ((i < layers.size() - 1) ? "," : "");
+    file << line.append("\n");
+    for (int l = 0; l < layers.size(); l++) {
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            line = std::to_string(l) + "," + std::to_string(n);
+            if (l < layers.size() - 1)
+                for (int w = 0; w < layers[l].neurons[n].outweights.size(); w++) {
+                    line += "," + std::to_string(layers[l].neurons[n].outweights[w]);
+                }
+            line += "," + std::to_string(layers[l].neurons[n].bias);
+            int s_of_r = layers[l].neurons[n].resWeights.size();
+            line += "," + std::to_string(s_of_r);
+            for (int r = 0; r < s_of_r; r++) {
+                line += "," + std::to_string(layers[l].neurons[n].resWeights[r].from.l) + "," + std::to_string(layers[l].neurons[n].resWeights[r].from.n) + "," + std::to_string(layers[l].neurons[n].resWeights[r].weight);
+            }
+            file << line << "\n";
+        }
+    }
+    line.clear();
+    file.close();
+}
+
+template<typename type>
+void ANN<type>::deserializebin(std::string filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        return;
+    }
+    int layerno;
+    file.read(reinterpret_cast<char *>(&layerno), sizeof(int));
+    std::vector<int> layern(layerno);
+    file.read(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
+
+    initializeshit(layern, std::vector<std::pair<NeuronID, NeuronID>> {});
+    
+
+    int layerid, neuronid, last = 0;
+    while (file.read(reinterpret_cast<char *>(&layerid), sizeof(int)) &&
+           file.read(reinterpret_cast<char *>(&neuronid), sizeof(int))) {
+        if (last > layerid)
+            break;
+        type weight = 0.0f;
+        for (auto &w : layers[layerid].neurons[neuronid].outweights) {
+            file.read(reinterpret_cast<char *>(&weight), sizeof(type));
+            w = weight;
+        }
+        type bias;
+        file.read(reinterpret_cast<char *>(&bias), sizeof(type));
+        layers[layerid].neurons[neuronid].bias = bias;
+        last = layerid;
+        int s_of_r;
+        file.read(reinterpret_cast<char *>(&s_of_r), sizeof(int));
+        if (s_of_r)
+            layers[layerid].neurons[neuronid].resWeights.clear();
+        for (int r = 0; r < s_of_r; r++) {
+            int l, n;
+            type w;
+            file.read(reinterpret_cast<char *>(&l), sizeof(int));
+            file.read(reinterpret_cast<char *>(&n), sizeof(int));
+            file.read(reinterpret_cast<char *>(&w), sizeof(type));
+
+            layers[layerid].neurons[neuronid].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
+        }
+    }
+
+    file.close();
+}
+
+template<typename type>
+void ANN<type>::serializebin(std::string filename) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        return;
+    }
+    int layerno = layers.size();
+    std::vector<int> layern;
+
+    for (auto &l : layers) {
+        layern.push_back(l.neurons.size());
+    }
+    file.write(reinterpret_cast<char *>(&layerno), sizeof(int));
+    file.write(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
+
+    for (int l = 0; l < layerno; l++) {
+        for (int n = 0; n < layers[l].neurons.size(); n++) {
+            int layerid = l, neuronid = n;
+            file.write(reinterpret_cast<char *>(&layerid), sizeof(int));
+            file.write(reinterpret_cast<char *>(&neuronid), sizeof(int));
+            for (int w = 0; w < layers[l].neurons[n].outweights.size(); w++) {
+                type weight = layers[l].neurons[n].outweights[w];
+                file.write(reinterpret_cast<char *>(&weight), sizeof(type));
+            }
+            type bias = layers[l].neurons[n].bias;
+            file.write(reinterpret_cast<char *>(&bias), sizeof(type));
+            int s_of_r = layers[l].neurons[n].resWeights.size();
+            file.write(reinterpret_cast<char *>(&s_of_r), sizeof(int));
+            for (int r = 0; r < s_of_r; r++) {
+                int lf = layers[l].neurons[n].resWeights[r].from.l, nf = layers[l].neurons[n].resWeights[r].from.n;
+                type w = layers[l].neurons[n].resWeights[r].weight;
+                file.write(reinterpret_cast<char *>(&lf), sizeof(int));
+                file.write(reinterpret_cast<char *>(&nf), sizeof(int));
+                file.write(reinterpret_cast<char *>(&w), sizeof(type));
+            }
+        }
+    }
+    file.close();
+}
+
 template<typename type> 
 struct ANN<type>::NEURON {
     type bias = 0.0f;
