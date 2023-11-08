@@ -73,6 +73,17 @@ struct ANN<type>::LAYER {
     ~LAYER();
 };
 
+template<typename type>
+void ANN<type>::LAYER::init(int n, LAYER *prev) {
+    neurons.resize(n, NEURON(*prev));
+    int x = 0;
+    for (auto &i : neurons) {
+        i.currentID = x;
+        x++;
+    }
+    prev = nullptr;
+}
+
 template<typename type> 
 struct ANN<type>::ResidualWeight {
     NeuronID from;
