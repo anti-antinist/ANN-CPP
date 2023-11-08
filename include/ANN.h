@@ -72,3 +72,10 @@ struct ANN<type>::LAYER {
     void init(int n, LAYER *prev);
     ~LAYER();
 };
+
+template<typename type> 
+struct ANN<type>::ResidualWeight {
+    NeuronID from;
+    type weight = 0.0f;
+    ResidualWeight(NeuronID fromp, type weightp);
+};
