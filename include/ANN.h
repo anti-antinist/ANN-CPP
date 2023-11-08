@@ -84,6 +84,11 @@ void ANN<type>::LAYER::init(int n, LAYER *prev) {
     prev = nullptr;
 }
 
+template<typename type>
+ANN<type>::LAYER::~LAYER() {
+    neurons.clear();
+}
+
 template<typename type> 
 struct ANN<type>::ResidualWeight {
     NeuronID from;
