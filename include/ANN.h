@@ -35,3 +35,18 @@ class ANN {
 
     template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
+
+template<typename type> 
+struct ANN<type>::NEURON {
+    type bias = 0.0f;
+    int currentID = 0;
+    type activation = 0.0f;
+    std::vector<type> outweights;
+    LAYER *previouslayer = nullptr;
+    std::vector<ResidualWeight> resWeights;
+    NEURON(LAYER &prev);
+    NEURON() = default;
+    ~NEURON();
+    void calculateActivation(type (&actfunc)(type));
+    void initializeweights(LAYER *next);
+};
