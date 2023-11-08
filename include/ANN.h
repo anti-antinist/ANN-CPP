@@ -99,6 +99,31 @@ void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<N
     }
 }
 
+template<typename type>
+std::vector<type> ANN<type>::costvec(std::vector<type> &target, int l) {
+    std::vector<type> out;
+    for (int n = 0; n < layers[l].neurons.size(); n++) {
+        out.push_back(layers[l].neurons[n].activation - target[n]);
+    }
+    return out;
+}
+template<typename type>
+typename ANN<type>::NEURON &ANN<type>::IDtoN(NeuronID nID) {
+    return *&*(layers[nID.l].neurons.begin() + nID.n);
+}
+
+template<typename type>
+type ANN<type>::costavg(std::vector<type> &target) {
+    assert(layers.back().neurons.size() == target.size());
+    type cost = 0.0f;
+    for (int i = 0; i < layers.back().neurons.size(); i++) {
+        cost += layers.back().neurons[i].activation - target[i];
+    }
+    cost = cost;
+    cost /= layers.back().neurons.size();
+    return cost;
+}
+
 template<typename type> 
 struct ANN<type>::NEURON {
     type bias = 0.0f;
