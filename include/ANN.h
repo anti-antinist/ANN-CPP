@@ -1,5 +1,6 @@
 #pragma once
 #include<vector>
+#include<string>
 
 struct NeuronID {
     int l = 0;
@@ -73,6 +74,30 @@ ANN<type>::~ANN() {
     layers.clear();
 }
 
+template<typename type>
+void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> ResWeights) {
+    assert(layern.size() >= 2);
+    layers.resize(layern.size());
+    for (int i = 0; i < layers.size(); i++) {
+        if (i == 0) {
+            layers[i].init(layern[i], nullptr);
+            continue;
+        } else {
+            layers[i].init(layern[i], &(*(layers.begin() + i - 1)));
+            continue;
+        }
+    }
+    for (int i = 0; i < layers.size(); i++) {
+        if (i != layers.size() - 1) {
+            for (auto &j : layers[i].neurons) {
+                j.initializeweights(&layers[i + 1]);
+            }
+        }
+    }
+    for (auto &r : ResWeights) {
+        SetResidualWeight(r.first, r.second, rand() / ((double)RAND_MAX * 1.0f) - 1.0f);
+    }
+}
 
 template<typename type> 
 struct ANN<type>::NEURON {
