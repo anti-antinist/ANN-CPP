@@ -3,6 +3,8 @@
 #include<string>
 #include<fstream>
 #include<ctime>
+#include<cassert>
+#include<sstream>
 
 struct NeuronID {
     int l = 0;
