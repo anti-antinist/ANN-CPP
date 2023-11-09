@@ -493,20 +493,6 @@ void ANN<type>::addNeuron(int lID){
     layers[lID].neurons.back().initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
 }
 
-/*template<typename type>
-void ANN<type>::deleteLayer(int lID){
-    if(lID > 0 && lID < layers.size()-1){
-        std::vector<std::vector<type>> new_w;
-        new_w.resize(layers[lID-1].neurons.size(),std::vector<type>(layers[lID+1].neurons.size(),0.5f));
-        for(int n = 0; n < layers[lID].neurons.size() && n < new_w.size(); n++){
-            for(int o = 0; o < layers[lID].neurons[n].outweights; o++){
-                new_w[n].push_back(layers[lID].neurons[n].outweights[o]);
-            }
-        }
-        layers.erase(lID + layers.begin());
-    }
-}*/
-
 template<typename type> 
 void ANN<type>::SetResidualWeight(NeuronID from, NeuronID to, type weight){
     assert(from.l < layers.size() || to.l < layers.size());
