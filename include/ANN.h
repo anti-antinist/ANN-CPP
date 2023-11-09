@@ -319,11 +319,11 @@ template<typename type>
 template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
-    type jump_slowdown;
+    type jump_slowdown = 1.0f;
 
     std::vector<type> delta = costvec(target, layers.size() - 1);
     std::vector<std::pair<ResidualWeight &, type>> res_r;
-    for (int n = 0; n < (*(layers.end() - 1)).neurons.size(); n++){
+    for (int n = 0; n < layers[layers.size()-1-1].neurons.size(); n++){
         if (learn_rate_safety){
             jump_slowdown = std::abs(target[n] - (*(layers.end() - 1)).neurons[n].activation);
         }
