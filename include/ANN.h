@@ -54,7 +54,7 @@ class ANN{
     void deleteNeuron(int lID);
     void addNeuron(int lID);
     void deleteLayer(int lID);
-    void addLayer(int lID);
+    void addLayer(int lID, int s);
 
     template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
@@ -89,17 +89,17 @@ void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<N
     layers.resize(layern.size());
     for (int i = 0; i < layers.size(); i++){
         if (i == 0){
-            layers[i].init(layern[i], nullptr);
+            layers[i].init(layern[i], -1);
             continue;
         } else{
-            layers[i].init(layern[i], &(*(layers.begin() + i - 1)));
+            layers[i].init(layern[i], i - 1);
             continue;
         }
     }
     for (int i = 0; i < layers.size(); i++){
         if (i != layers.size() - 1){
             for (auto &j : layers[i].neurons){
-                j.initializeweights(&layers[i + 1]);
+                j.initializeweights(i + 1);
             }
         }
     }
@@ -116,6 +116,7 @@ std::vector<type> ANN<type>::costvec(std::vector<type> &target, int l){
     }
     return out;
 }
+
 template<typename type>
 typename ANN<type>::NEURON &ANN<type>::IDtoN(NeuronID nID){
     return *&*(layers[nID.l].neurons.begin() + nID.n);
@@ -325,6 +326,7 @@ template<typename type>
 void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights){
     initializeshit(layern, ResWeights);
 }
+
 template<typename type>
 template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
@@ -517,30 +519,29 @@ struct ANN<type>::NEURON{
     int currentID = 0;
     type activation = 0.0f;
     std::vector<type> outweights;
-    LAYER *previouslayer = nullptr;
+    int previouslayer = -1;
     std::vector<ResidualWeight> resWeights;
-    NEURON(LAYER *prev);
+    NEURON(int lID);
     NEURON() = default;
     ~NEURON();
     void calculateActivation(type (&actfunc)(type));
-    void initializeweights(LAYER *next);
+    void initializeweights(int next);
 };
 
 template<typename type> 
-ANN<type>::NEURON::NEURON(LAYER *prev){
-    previouslayer = prev;
+ANN<type>::NEURON::NEURON(int lID){
+    previouslayer = lID;
 }
 
 template<typename type> 
 ANN<type>::NEURON::~NEURON(){
     outweights.clear();
-    previouslayer = nullptr;
 }
 
 template<typename type> 
 void ANN<type>::NEURON::calculateActivation(type (&actfunc)(type)){
     activation = 0.0f;
-    for (auto &i : previouslayer->neurons){
+    for (auto &i : layers[previouslayer].neurons){
         activation += i.outweights[currentID] * i.activation + bias;
     }
     for (auto &r : resWeights){
@@ -550,13 +551,12 @@ void ANN<type>::NEURON::calculateActivation(type (&actfunc)(type)){
 }
 
 template<typename type> 
-void ANN<type>::NEURON::initializeweights(LAYER *next){
+void ANN<type>::NEURON::initializeweights(int next){
     srand(std::time(NULL));
-    outweights.resize(next->neurons.size(), 1.0f);
+    outweights.resize(layers[next].neurons.size(), 1.0f);
     for (type &i : outweights)
         i = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
     bias = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
-    next = nullptr;
 }
 
 template<typename type> 
@@ -564,19 +564,18 @@ struct ANN<type>::LAYER{
   public:
 
     std::vector<NEURON> neurons;
-    void init(int n, LAYER *prev);
+    void init(int n, int prev);
     ~LAYER();
 };
 
 template<typename type>
-void ANN<type>::LAYER::init(int n, LAYER *prev){
+void ANN<type>::LAYER::init(int n, int prev){
     neurons.resize(n, NEURON(prev));
     int x = 0;
     for (auto &i : neurons){
         i.currentID = x;
         x++;
     }
-    prev = nullptr;
 }
 
 template<typename type>
