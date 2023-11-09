@@ -51,6 +51,10 @@ class ANN{
     void backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety);
     template<typename lr_type>
     void batchbackpropagate(std::vector<std::vector<type>> &input, std::vector<std::vector<type>> &target, lr_type learn_rate, bool learn_rate_safety);
+    void deleteNeuron(int lID);
+    void addNeuron(int lID);
+    void deleteLayer(int lID);
+    void addLayer(int lID);
 
     template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
