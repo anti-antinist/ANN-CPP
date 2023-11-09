@@ -492,7 +492,7 @@ void ANN<type>::deleteNeuron(int lID){
 
 template<typename type>
 void ANN<type>::addNeuron(int lID){
-    layers[lID].neurons.push_back(NEURON<type>((lID > 0) ? &layers[lID-1] : nullptr));
+    layers[lID].neurons.push_back(NEURON((lID > 0) ? &layers[lID-1] : nullptr));
     (*layers[lID].neurons.end()).initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
 }
 
