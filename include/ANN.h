@@ -319,7 +319,7 @@ template<typename type>
 template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
-    type jump_slowdown = 0.0f;
+    type jump_slowdown = 1.0f;
 
     std::vector<type> delta = costvec(target, layers.size() - 1);
     std::vector<std::pair<ResidualWeight &, type>> res_r;
@@ -396,7 +396,7 @@ template<typename type>
 template<typename lr_type> 
 void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::vector<std::vector<type>> &target, lr_type learn_rate, bool learn_rate_safety){
     assert(target.size() == input.size());
-    type jump_slowdown = 0.0f;
+    type jump_slowdown = 1.0f;
     std::vector<type> delta, single_target(target[0].size(), 0.0f);
     std::vector<std::pair<ResidualWeight &, type>> res_r;
     for (int i = 0; i < input.size(); i++){
@@ -522,6 +522,7 @@ struct ANN<type>::NEURON{
     type activation = 0.0f;
     std::vector<type> outweights;
     std::vector<ResidualWeight> resWeights;
+    NEURON(int lID);
     NEURON() = default;
     ~NEURON();
     void initializeweights(int next);
