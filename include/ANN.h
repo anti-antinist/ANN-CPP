@@ -485,6 +485,17 @@ void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::v
     }
 }
 
+template<typename type>
+void ANN<type>::deleteNeuron(int lID){
+    layers[lID].erase(layers[lID].end());
+}
+
+template<typename type>
+void ANN<type>::addNeuron(int lID){
+    layers[lID].neurons.push_back(NEURON<type>((lID > 0) ? &layers[lID-1] : nullptr));
+    (*layers[lID].neurons.end()).initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
+}
+
 template<typename type> 
 void ANN<type>::SetResidualWeight(NeuronID from, NeuronID to, type weight){
     assert(from.l < layers.size() || to.l < layers.size());
