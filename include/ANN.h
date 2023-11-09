@@ -1,11 +1,8 @@
 #pragma once
 #include<vector>
 #include<string>
-<<<<<<< HEAD
 #include<fstream>
 #include<ctime>
-=======
->>>>>>> parent of 32aec14 (resetstructure of ANN class)
 
 struct NeuronID {
     int l = 0;
@@ -318,7 +315,6 @@ void ANN<type>::serializebin(std::string filename) {
 }
 
 template<typename type> 
-<<<<<<< HEAD
 void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights) {
     initializeshit(layern, ResWeights);
 }
@@ -491,8 +487,6 @@ void ANN<type>::SetResidualWeight(NeuronID from, NeuronID to, type weight) {
 }
 
 template<typename type> 
-=======
->>>>>>> parent of 32aec14 (resetstructure of ANN class)
 struct ANN<type>::NEURON {
     type bias = 0.0f;
     int currentID = 0;
