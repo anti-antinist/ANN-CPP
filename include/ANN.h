@@ -319,16 +319,16 @@ template<typename type>
 template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
-    type jump_slowdown = 1.0f;
+    type jump_slowdown = 0.0f;
 
     std::vector<type> delta = costvec(target, layers.size() - 1);
     std::vector<std::pair<ResidualWeight &, type>> res_r;
-    for (int n = 0; n < layers[layers.size()-1-1].neurons.size(); n++){
+    for (int n = 0; n < (*(layers.end() - 1)).neurons.size(); n++){
         if (learn_rate_safety){
             jump_slowdown = std::abs(target[n] - (*(layers.end() - 1)).neurons[n].activation);
         }
-        for (int o = 0; o < layers[layers.size()-1-1].neurons[n].outweights.size(); o++){
-            layers[layers.size()-1-1].neurons[n].outweights[o] -= learn_rate * jump_slowdown * layers[layers.size()-1-1].neurons[n].activation * delta[o];
+        for (int o = 0; o < (*(layers.end() - 1)).neurons[n].outweights.size(); o++){
+            (*(layers.end() - 1)).neurons[n].outweights[o] -= learn_rate * jump_slowdown * (*(layers.end() - 1)).neurons[n].activation * delta[o];
         }
     }
     for (int b = 0; b < (layers.back()).neurons.size(); b++){
@@ -396,7 +396,7 @@ template<typename type>
 template<typename lr_type> 
 void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::vector<std::vector<type>> &target, lr_type learn_rate, bool learn_rate_safety){
     assert(target.size() == input.size());
-    type jump_slowdown;
+    type jump_slowdown = 0.0f;
     std::vector<type> delta, single_target(target[0].size(), 0.0f);
     std::vector<std::pair<ResidualWeight &, type>> res_r;
     for (int i = 0; i < input.size(); i++){
@@ -492,6 +492,20 @@ void ANN<type>::addNeuron(int lID){
     }
     layers[lID].neurons.back().initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
 }
+
+/*template<typename type>
+void ANN<type>::deleteLayer(int lID){
+    if(lID > 0 && lID < layers.size()-1){
+        std::vector<std::vector<type>> new_w;
+        new_w.resize(layers[lID-1].neurons.size(),std::vector<type>(layers[lID+1].neurons.size(),0.5f));
+        for(int n = 0; n < layers[lID].neurons.size() && n < new_w.size(); n++){
+            for(int o = 0; o < layers[lID].neurons[n].outweights; o++){
+                new_w[n].push_back(layers[lID].neurons[n].outweights[o]);
+            }
+        }
+        layers.erase(lID + layers.begin());
+    }
+}*/
 
 template<typename type> 
 void ANN<type>::SetResidualWeight(NeuronID from, NeuronID to, type weight){
