@@ -500,7 +500,7 @@ void ANN<type>::addNeuron(int lID){
     else{
         layers[lID].neurons.push_back(NEURON());
     }
-    (*layers[lID].neurons.end()).initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
+    layers[lID].neurons.back().initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
 }
 
 template<typename type> 
@@ -570,7 +570,7 @@ struct ANN<type>::LAYER{
 
 template<typename type>
 void ANN<type>::LAYER::init(int n, LAYER *prev){
-    neurons.resize(n, NEURON(*prev));
+    neurons.resize(n, NEURON(prev));
     int x = 0;
     for (auto &i : neurons){
         i.currentID = x;
