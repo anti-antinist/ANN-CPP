@@ -487,7 +487,7 @@ void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::v
 
 template<typename type>
 void ANN<type>::deleteNeuron(int lID){
-    layers[lID].erase(layers[lID].end());
+    layers[lID].neurons.erase(layers[lID].neurons.end());
 }
 
 template<typename type>
