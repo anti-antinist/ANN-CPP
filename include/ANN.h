@@ -86,6 +86,7 @@ ANN<type>::~ANN(){
 template<typename type>
 void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> ResWeights){
     assert(layern.size() >= 2);
+    srand(std::time(NULL));
     layers.resize(layern.size());
     for (int i = 0; i < layers.size(); i++){
         layers[i].init(layern[i], i);
@@ -484,6 +485,7 @@ void ANN<type>::deleteNeuron(int lID){
 template<typename type>
 void ANN<type>::addNeuron(int lID){
     assert(lID >= 0 && lID < layers.size());
+    srand(std::time(NULL));
     layers[lID].neurons.push_back(NEURON());
     if(lID < layers.size()-1){ 
         layers[lID].neurons.back().initializeweights(lID+1);
@@ -552,7 +554,6 @@ ANN<type>::NEURON::~NEURON(){
 
 template<typename type> 
 void ANN<type>::NEURON::initializeweights(int next){
-    srand(std::time(NULL));
     outweights.resize(layers[next].neurons.size(), 0.0f);
     for (type &i : outweights)
         i = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
