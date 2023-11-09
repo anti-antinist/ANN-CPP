@@ -327,8 +327,8 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
         if (learn_rate_safety){
             jump_slowdown = std::abs(target[n] - (*(layers.end() - 1)).neurons[n].activation);
         }
-        for (int o = 0; o < (*(layers.end() - 1)).neurons[n].outweights.size(); o++){
-            (*(layers.end() - 1)).neurons[n].outweights[o] -= learn_rate * jump_slowdown * (*(layers.end() - 1)).neurons[n].activation * delta[o];
+        for (int o = 0; o < layers[layers.size()-1-1].neurons[n].outweights.size(); o++){
+            layers[layers.size()-1-1].neurons[n].outweights[o] -= learn_rate * jump_slowdown * layers[layers.size()-1-1].neurons[n].activation * delta[o];
         }
     }
     for (int b = 0; b < (layers.back()).neurons.size(); b++){
