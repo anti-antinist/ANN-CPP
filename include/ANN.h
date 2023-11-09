@@ -540,7 +540,6 @@ struct ANN<type>::NEURON{
     type activation = 0.0f;
     std::vector<type> outweights;
     std::vector<ResidualWeight> resWeights;
-    NEURON(int lID);
     NEURON() = default;
     ~NEURON();
     void initializeweights(int next);
