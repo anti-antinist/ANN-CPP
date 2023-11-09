@@ -487,12 +487,20 @@ void ANN<type>::batchbackpropagate(std::vector<std::vector<type>> &input, std::v
 
 template<typename type>
 void ANN<type>::deleteNeuron(int lID){
+    assert(lID >= 0 && lID < layers.size());
     layers[lID].neurons.erase(layers[lID].neurons.end());
 }
 
 template<typename type>
 void ANN<type>::addNeuron(int lID){
-    layers[lID].neurons.push_back(NEURON((lID > 0) ? &layers[lID-1] : nullptr));
+    assert(lID >= 0 && lID < layers.size());
+    if(lID > 0){
+        layers[lID].neurons.push_back(NEURON(layers[lID-1]));
+    }
+    else{
+        layers[lID].neurons.push_back(NEURON());
+    }
+
     (*layers[lID].neurons.end()).initializeweights((lID < layers.size()-1) ? &layers[lID+1] : nullptr);
 }
 
