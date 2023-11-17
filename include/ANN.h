@@ -53,8 +53,8 @@ class ANN{
         void addNeuron(unsigned int lID);
         void deleteLayer(unsigned int lID);
         void addLayer(unsigned int lID, unsigned int s);
-        void AddResidualWeight(NeuronID from, NeuronID to, type weight);
         void DeleteResidualWeight(NeuronID from, NeuronID to);
+        void AddResidualWeight(NeuronID from, NeuronID to, type weight);
 
         template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
@@ -436,14 +436,6 @@ void ANN<type>::addLayer(unsigned int lID, unsigned int s){
     }
 }
 
-template<typename type> 
-void ANN<type>::AddResidualWeight(NeuronID from, NeuronID to, type weight){
-    assert(from.l < layers.size() || to.l < layers.size());
-    assert(from.n < layers[from.l].neurons.size() || to.n < layers[to.l].neurons.size());
-    assert(from.l < to.l);
-    layers[to.l].neurons[to.n].resWeights.push_back(ResidualWeight(from, weight));
-}
-
 template<typename type>
 void ANN<type>::DeleteResidualWeight(NeuronID from, NeuronID to){
     assert(from.l < layers.size() || to.l < layers.size());
@@ -455,6 +447,14 @@ void ANN<type>::DeleteResidualWeight(NeuronID from, NeuronID to){
             break;
         }
     }
+}
+
+template<typename type> 
+void ANN<type>::AddResidualWeight(NeuronID from, NeuronID to, type weight){
+    assert(from.l < layers.size() || to.l < layers.size());
+    assert(from.n < layers[from.l].neurons.size() || to.n < layers[to.l].neurons.size());
+    assert(from.l < to.l);
+    layers[to.l].neurons[to.n].resWeights.push_back(ResidualWeight(from, weight));
 }
 
 template<typename type> 
