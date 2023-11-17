@@ -23,44 +23,44 @@ struct NeuronID{
 
 template<typename type>
 class ANN{
-  private:
+    private:
 
-    struct NEURON;
-    struct LAYER;
-    struct ResidualWeight;
-    void initializeshit(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> ResWeights);
-    std::vector<type> costvec(std::vector<type> &target, unsigned int l);
-    inline static std::vector<LAYER> layers;
-    static NEURON &IDtoN(NeuronID nID);
-    inline static type (*actfuncHID)(type in);
-    inline static type (*actfuncOUT)(type in);
-  public:
+        struct NEURON;
+        struct LAYER;
+        struct ResidualWeight;
+        void initializeshit(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> ResWeights);
+        std::vector<type> costvec(std::vector<type> &target, unsigned int l);
+        inline static std::vector<LAYER> layers;
+        static NEURON &IDtoN(NeuronID nID);
+        inline static type (*actfuncHID)(type in);
+        inline static type (*actfuncOUT)(type in);
+    public:
 
-    ANN(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
-    ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
-    ANN() = default;
-    ~ANN();
-    type costavg(std::vector<type> &target);
-    std::vector<type> forwardpropagate(std::vector<type> &input);
-    void deserializecsv(std::string filename);
-    void serializecsv(std::string filename);
-    void deserializebin(std::string filename);
-    void serializebin(std::string filename);
-    void resetStructure(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights);
-    template<typename lr_type>
-    void backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety);
-    void deleteNeuron(unsigned int lID);
-    void addNeuron(unsigned int lID);
-    void deleteLayer(unsigned int lID);
-    void addLayer(unsigned int lID, unsigned int s);
-    void AddResidualWeight(NeuronID from, NeuronID to, type weight);
-    void DeleteResidualWeight(NeuronID from, NeuronID to);
+        ANN(const std::vector<int> &layern, const std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
+        ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
+        ANN() = default;
+        ~ANN();
+        type costavg(const std::vector<type> &target);
+        std::vector<type> forwardpropagate(const std::vector<type> &input);
+        void deserializecsv(std::string filename);
+        void serializecsv(std::string filename);
+        void deserializebin(std::string filename);
+        void serializebin(std::string filename);
+        void resetStructure(const std::vector<int> &layern, const std::vector<std::pair<NeuronID, NeuronID>> &ResWeights);
+        template<typename lr_type>
+        void backpropagate(const std::vector<type> &input, const std::vector<type> &target, lr_type learn_rate, bool learn_rate_safety);
+        void deleteNeuron(unsigned int lID);
+        void addNeuron(unsigned int lID);
+        void deleteLayer(unsigned int lID);
+        void addLayer(unsigned int lID, unsigned int s);
+        void AddResidualWeight(NeuronID from, NeuronID to, type weight);
+        void DeleteResidualWeight(NeuronID from, NeuronID to);
 
-    template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
+        template<typename TYPE_ANN_TRAINER> friend class ANN_TRAINER;
 };
 
 template<typename type>
-ANN<type>::ANN(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
+ANN<type>::ANN(const std::vector<int> &layern, const std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
     initializeshit(layern, ResWeights);
     actfuncHID = actfuncHIDp;
     actfuncOUT = actfuncOUTp;
@@ -92,7 +92,7 @@ void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<N
         layers[i].init(layern[i], i, (layern.size()-1 == i) ? 0 : layern[i+1]);
     }
     for (auto &r : ResWeights){
-        AddResidualWeight(r.first, r.second, /*rand() / ((double)RAND_MAX * 1.0f) - 1.0f*/1.0f);
+        AddResidualWeight(r.first, r.second, 1.0f);
     }
 }
 
@@ -111,7 +111,7 @@ typename ANN<type>::NEURON &ANN<type>::IDtoN(NeuronID nID){
 }
 
 template<typename type>
-type ANN<type>::costavg(std::vector<type> &target){
+type ANN<type>::costavg(const std::vector<type> &target){
     assert(layers.back().neurons.size() == target.size());
     type cost = 0.0f;
     for (unsigned int i = 0; i < layers.back().neurons.size(); i++){
@@ -123,7 +123,7 @@ type ANN<type>::costavg(std::vector<type> &target){
 }
 
 template<typename type>
-std::vector<type> ANN<type>::forwardpropagate(std::vector<type> &input){
+std::vector<type> ANN<type>::forwardpropagate(const std::vector<type> &input){
     assert(input.size() == layers[0].neurons.size());
     for (auto &n : layers[0].neurons){
         n.activation = input[n.currentID] + n.bias;
@@ -307,13 +307,13 @@ void ANN<type>::serializebin(std::string filename){
 }
 
 template<typename type> 
-void ANN<type>::resetStructure(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights){
+void ANN<type>::resetStructure(const std::vector<int> &layern, const std::vector<std::pair<NeuronID, NeuronID>> &ResWeights){
     initializeshit(layern, ResWeights);
 }
 
 template<typename type>
 template<typename lr_type>
-void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
+void ANN<type>::backpropagate(const std::vector<type> &input, const std::vector<type>& target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
     type jump_slowdown = 1.0f;
     std::vector<type> delta, prev_delta;
@@ -546,3 +546,9 @@ ANN<type>::ResidualWeight::ResidualWeight(NeuronID fromp, type weightp){
     from = fromp;
     weight = weightp;
 }
+
+template<typename type> 
+class GeneticEvolution{
+    private:
+        std::vector<ANN<type>*> networks;
+};
