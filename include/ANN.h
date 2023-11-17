@@ -320,21 +320,25 @@ template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
     type jump_slowdown = 1.0f;
-
+    std::vector<type> delta,prev_delta;
     for(int l = layers.size()-1; l >= 0; l--){
-        std::vector<type> delta,newtarget;
         //std::vector<NeuronID, type> res_w;
         if(l == layers.size()-1){
             delta.resize(target.size());
             delta = costvec(target, l);
         }
         else{
-            newtarget.resize(layers[l].neurons.size(), 0.0f);
-            //left for work
-            delta.resize(newtarget.size());
-            delta = costvec(newtarget,l);
-            target.resize(newtarget.size());
-            target = newtarget;
+            prev_delta.clear();
+            prev_delta.resize(delta.size());
+            prev_delta = delta;
+            delta.resize(layers[l].neurons.size(),0.0f);
+            for(int i = 0; i < delta.size(); i++){
+                type sum = 0.0f;
+                for(int t = 0; t < prev_delta.size(); t++){
+                    sum += prev_delta[t]*layers[l].neurons[i].outweights[t];
+                }
+                delta[i] = layers[l].neurons[i].activation*(1-layers[l].neurons[i].activation)*sum;
+            }
         }
         if(l > 0){
             for(int n = 0; n < layers[l-1].neurons.size(); n++){
@@ -429,9 +433,9 @@ ANN<type>::NEURON::~NEURON(){
 template<typename type> 
 void ANN<type>::NEURON::initializeweights(int next){
     outweights.resize(layers[next].neurons.size(), 1.0f);
-    /*for (type &i : outweights)
+    for (type &i : outweights)
         i = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
-    bias = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;*/
+    bias = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
 }
 
 template<typename type> 
