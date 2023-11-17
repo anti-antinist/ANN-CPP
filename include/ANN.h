@@ -322,7 +322,7 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
     type jump_slowdown = 1.0f;
     std::vector<type> delta,prev_delta;
     for(int l = layers.size()-1; l >= 0; l--){
-        //std::vector<NeuronID, type> res_w;
+        std::vector<std::pair<ResidualWeight&, type>> res_w;
         if(l == layers.size()-1){
             delta.resize(target.size());
             delta = costvec(target, l);
@@ -344,6 +344,9 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
             for(int n = 0; n < layers[l-1].neurons.size(); n++){
                 for(int o = 0; o < layers[l].neurons.size(); o++){
                     layers[l-1].neurons[n].outweights[o] -= learn_rate * layers[l-1].neurons[n].activation * delta[o];
+                }
+                for(int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
+                    res_w.push_back(std::pair<ResidualWeight&, type>(layers[l].neurons[n].resWeights[r], delta[n]));
                 }
             }
         }
