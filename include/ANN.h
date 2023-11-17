@@ -96,7 +96,7 @@ void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<N
         }
     }
     for (auto &r : ResWeights){
-        SetResidualWeight(r.first, r.second, rand() / ((double)RAND_MAX * 1.0f) - 1.0f);
+        SetResidualWeight(r.first, r.second, /*rand() / ((double)RAND_MAX * 1.0f) - 1.0f*/1.0f);
     }
 }
 
@@ -337,7 +337,17 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
                 for(int t = 0; t < prev_delta.size(); t++){
                     sum += prev_delta[t]*layers[l].neurons[i].outweights[t];
                 }
+                for(int r = 0; r < res_w.size(); r++){
+                    if(res_w[r].first.from == NeuronID(l,i)){
+                        sum += res_w[r].second*res_w[r].first.weight;
+                    }
+                }
                 delta[i] = layers[l].neurons[i].activation*(1-layers[l].neurons[i].activation)*sum;
+            }
+        }
+        for (int n = 0; n < layers[l].neurons.size(); n++){
+            for (int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
+                res_w.push_back(std::pair<ResidualWeight &, type>(layers[l].neurons[n].resWeights[r], delta[n]));
             }
         }
         if(l > 0){
@@ -345,12 +355,13 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
                 for(int o = 0; o < layers[l].neurons.size(); o++){
                     layers[l-1].neurons[n].outweights[o] -= learn_rate * layers[l-1].neurons[n].activation * delta[o];
                 }
+            }
+            for(int n = 0; n < layers[l].neurons.size(); n++){
                 for(int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
-                    res_w.push_back(std::pair<ResidualWeight&, type>(layers[l].neurons[n].resWeights[r], delta[n]));
+                    layers[l].neurons[n].resWeights[r].weight -= learn_rate * IDtoN(layers[l].neurons[n].resWeights[r].from).activation * delta[n];
                 }
             }
         }
-
         for(int b = 0; b < layers[l].neurons.size(); b++){
             layers[l].neurons[b].bias -= learn_rate * delta[b];
         }
