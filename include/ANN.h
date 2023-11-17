@@ -30,11 +30,11 @@ class ANN{
     struct ResidualWeight;
     void initializeshit(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> ResWeights);
     std::vector<type> costvec(std::vector<type> &target, int l);
-    static std::vector<LAYER> layers;
+    inline static std::vector<LAYER> layers;
     static NEURON &IDtoN(NeuronID nID);
     void SetResidualWeight(NeuronID from, NeuronID to, type weight);
-    static type (*actfuncHID)(type in);
-    static type (*actfuncOUT)(type in);
+    inline static type (*actfuncHID)(type in);
+    inline static type (*actfuncOUT)(type in);
   public:
 
     ANN(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
