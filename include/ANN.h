@@ -324,7 +324,6 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
             delta = costvec(target, l);
         }
         else{
-            prev_delta.clear();
             prev_delta.resize(delta.size());
             prev_delta = delta;
             delta.resize(layers[l].neurons.size(), 0.0f);
@@ -339,11 +338,9 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
                     }
                 }
                 delta[i] = layers[l].neurons[i].activation*(1-layers[l].neurons[i].activation)*sum;
-            }
-        }
-        for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
-            for (unsigned int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
-                res_w.push_back(std::pair<ResidualWeight &, type>(layers[l].neurons[n].resWeights[r], delta[n]));
+                for (unsigned int r = 0; r < layers[l].neurons[i].resWeights.size(); r++){
+                    res_w.push_back(std::pair<ResidualWeight &, type>(layers[l].neurons[i].resWeights[r], delta[i]));
+                }
             }
         }
         if(l > 0){
