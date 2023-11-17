@@ -89,12 +89,7 @@ void ANN<type>::initializeshit(std::vector<int> &layern, std::vector<std::pair<N
     srand(std::time(NULL));
     layers.resize(layern.size());
     for (unsigned int i = 0; i < layers.size(); i++){
-        layers[i].init(layern[i], i);
-    }
-    for (unsigned int i = 0; i < layers.size()-1; i++){
-        for (auto &j : layers[i].neurons){
-            j.initializeweights(i + 1);
-        }
+        layers[i].init(layern[i], i, (layern.size()-1 == i) ? 0 : layern[i+1]);
     }
     for (auto &r : ResWeights){
         AddResidualWeight(r.first, r.second, /*rand() / ((double)RAND_MAX * 1.0f) - 1.0f*/1.0f);
@@ -312,7 +307,7 @@ void ANN<type>::serializebin(std::string filename){
 }
 
 template<typename type> 
-void ANN<type>::resetStructure(std::vector<int> &layern,std::vector<std::pair<NeuronID, NeuronID>> &ResWeights){
+void ANN<type>::resetStructure(std::vector<int> &layern, std::vector<std::pair<NeuronID, NeuronID>> &ResWeights){
     initializeshit(layern, ResWeights);
 }
 
@@ -321,7 +316,7 @@ template<typename lr_type>
 void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target, lr_type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
     type jump_slowdown = 1.0f;
-    std::vector<type> delta,prev_delta;
+    std::vector<type> delta, prev_delta;
     std::vector<std::pair<ResidualWeight&, type>> res_w;
     for(int l = layers.size()-1; l >= 0; l--){
         if(l == layers.size()-1){
@@ -332,14 +327,14 @@ void ANN<type>::backpropagate(std::vector<type> &input, std::vector<type> target
             prev_delta.clear();
             prev_delta.resize(delta.size());
             prev_delta = delta;
-            delta.resize(layers[l].neurons.size(),0.0f);
+            delta.resize(layers[l].neurons.size(), 0.0f);
             for(unsigned int i = 0; i < delta.size(); i++){
                 type sum = 0.0f;
                 for(unsigned int t = 0; t < prev_delta.size(); t++){
                     sum += prev_delta[t]*layers[l].neurons[i].outweights[t];
                 }
                 for(unsigned int r = 0; r < res_w.size(); r++){
-                    if(res_w[r].first.from == NeuronID(l,i)){
+                    if(res_w[r].first.from == NeuronID(l, i)){
                         sum += res_w[r].second*res_w[r].first.weight;
                     }
                 }
@@ -388,22 +383,20 @@ void ANN<type>::addNeuron(unsigned int lID){
 template<typename type>
 void ANN<type>::deleteLayer(unsigned int lID){
     if(lID > 0 && lID < layers.size()-1){
-        std::vector<std::vector<type>> new_w;
-        new_w.resize(layers[lID-1].neurons.size(),std::vector<type>(layers[lID+1].neurons.size(),1.0f));
-        for(unsigned int n = 0; n < layers[lID].neurons.size() && n < new_w.size(); n++){
-            for(unsigned int o = 0; o < layers[lID].neurons[n].outweights.size(); o++){
-                new_w[n][o] = (layers[lID].neurons[n].outweights[o]);
+        for(unsigned int n = 0; n < layers[lID-1].neurons.size(); n++){
+            if(n < layers[lID].neurons.size()){
+                layers[lID-1].neurons[n].outweights.clear();
+                layers[lID-1].neurons[n].outweights.resize(layers[lID+1].neurons.size());
+                layers[lID-1].neurons[n].outweights = layers[lID].neurons[n].outweights;
+            }
+            else{
+                layers[lID-1].neurons[n].outweights.clear();
+                layers[lID-1].neurons[n].outweights.resize(layers[lID+1].neurons.size());                
             }
         }
         layers.erase(lID + layers.begin());
         for(unsigned int l = lID; l < layers.size(); l++){
             layers[l].curr_l--;
-        }
-        for(auto& n : layers[lID-1].neurons){
-            n.outweights.clear();
-            for(auto& w : new_w[n.currentID]){
-                n.outweights.push_back(w);
-            }
         }
     }
     else if(lID == 0){
@@ -417,6 +410,32 @@ void ANN<type>::deleteLayer(unsigned int lID){
         for(auto& n : layers.back().neurons){
             n.outweights.clear();
         }
+    }
+}
+
+template<typename type>
+void ANN<type>::addLayer(unsigned int lID, unsigned int s){
+    layers.insert(lID+layers.begin(), LAYER(s, lID, layers[lID].neurons.size()));
+    if(lID > 0 && lID < layers.size()-1){
+        for(unsigned int n = 0; n < layers[lID].neurons.size(); n++){
+            if(n <= layers[lID-1].neurons.size()-1){
+                layers[lID].neurons[n].outweights = layers[lID-1].neurons[n].outweights;
+                layers[lID-1].neurons[n].outweights.resize(layers[lID].neurons.size());
+                layers[lID-1].neurons[n].initializeweights();
+            }
+        }
+        for(unsigned int l = lID+1; l < layers.size(); l++){
+            layers[l].curr_l++;
+        }
+    }
+    else if(lID == 0){
+        for(unsigned int l = 0; l < layers.size(); l++){
+            layers[l].curr_l++;
+        }
+    }
+    else{
+        layers[layers.size()-1].init(s, lID, 0);
+        layers[lID-1].init(layers[lID-1].neurons.size(), lID-1, layers[lID].neurons.size());
     }
 }
 
@@ -450,7 +469,8 @@ struct ANN<type>::NEURON{
     std::vector<ResidualWeight> resWeights;
     NEURON() = default;
     ~NEURON();
-    void initializeweights(unsigned int next);
+    void initializeweights();
+    friend struct LAYER;
 };
 
 template<typename type> 
@@ -459,8 +479,7 @@ ANN<type>::NEURON::~NEURON(){
 }
 
 template<typename type> 
-void ANN<type>::NEURON::initializeweights(unsigned int next){
-    outweights.resize(layers[next].neurons.size(), 1.0f);
+void ANN<type>::NEURON::initializeweights(){
     for (type &i : outweights)
         i = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
     bias = rand() / ((double)RAND_MAX * 1.0f) - 1.0f;
@@ -472,19 +491,35 @@ struct ANN<type>::LAYER{
 
     std::vector<NEURON> neurons;
     unsigned int curr_l = 0;
-    void init(unsigned int n, unsigned int curr);
-    void calcActs(type(actfunc)(type));
+    LAYER(unsigned int n, unsigned int curr, unsigned int next_s);
+    LAYER() = default;
     ~LAYER();
+    void init(unsigned int n, unsigned int curr, unsigned int next_s);
+    void calcActs(type(actfunc)(type));
 };
 
 template<typename type>
-void ANN<type>::LAYER::init(unsigned int n, unsigned int curr){
+ANN<type>::LAYER::LAYER(unsigned int n, unsigned int curr, unsigned int next_s){
+    init(n, curr, next_s);
+}
+
+template<typename type>
+ANN<type>::LAYER::~LAYER(){
+    neurons.clear();
+}
+
+template<typename type>
+void ANN<type>::LAYER::init(unsigned int n, unsigned int curr, unsigned int next_s){
     neurons.resize(n, NEURON());
     curr_l = curr;
     unsigned int x = 0;
     for (auto &i : neurons){
         i.currentID = x;
         x++;
+        if(curr < layers.size()-1){
+            i.outweights.resize(next_s);
+            i.initializeweights();
+        }
     }
 }
 
@@ -500,11 +535,6 @@ void ANN<type>::LAYER::calcActs(type(actfunc)(type)){
         }
         n.activation = actfunc(n.activation+n.bias);
     }
-}
-
-template<typename type>
-ANN<type>::LAYER::~LAYER(){
-    neurons.clear();
 }
 
 template<typename type> 
