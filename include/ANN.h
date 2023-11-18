@@ -595,5 +595,14 @@ void EVO_TRAINER<type>::mutate_generation(const std::vector<std::pair<type, type
 
 template<typename type>
 ANN<type>& EVO_TRAINER<type>::best_speciman(){
-
+    type best_ff = fitness(networks[0]);
+    unsigned int best_net = 0;
+    for(unsigned int nn = 1; nn < networks.size(); nn++){
+        type current_ff = fitness(*networks[nn]);
+        if(fitness(*networks[nn]) > best_ff){
+            best_ff = current_ff;
+            best_net = nn;
+        }
+    }
+    return networks[best_net];
 }
