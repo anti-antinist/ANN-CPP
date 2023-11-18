@@ -197,16 +197,18 @@ void ANN<type>::serializecsv(std::string filename){
         return;
     }
     std::string line;
-    for (unsigned int i = 0; i < layers.size(); i++)
+    for (unsigned int i = 0; i < layers.size(); i++){
         line += std::to_string(layers[i].neurons.size()) + ((i < layers.size() - 1) ? "," : "");
+    }
     file << line.append("\n");
     for (unsigned int l = 0; l < layers.size(); l++){
         for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
             line = std::to_string(l) + "," + std::to_string(n);
-            if (l < layers.size() - 1)
+            if (l < layers.size() - 1){
                 for (unsigned int w = 0; w < layers[l].neurons[n].outweights.size(); w++){
                     line += "," + std::to_string(layers[l].neurons[n].outweights[w]);
                 }
+            }
             line += "," + std::to_string(layers[l].neurons[n].bias);
             unsigned int s_of_r = layers[l].neurons[n].resWeights.size();
             line += "," + std::to_string(s_of_r);
@@ -236,8 +238,9 @@ void ANN<type>::deserializebin(std::string filename){
     unsigned int layerid, neuronid, last = 0;
     while (file.read(reinterpret_cast<char *>(&layerid), sizeof(int))&&
            file.read(reinterpret_cast<char *>(&neuronid), sizeof(int))){
-        if (last > layerid)
+        if (last > layerid){
             break;
+        }
         type weight = 0.0f;
         for (auto& w : layers[layerid].neurons[neuronid].outweights){
             file.read(reinterpret_cast<char *>(&weight), sizeof(type));
@@ -249,8 +252,9 @@ void ANN<type>::deserializebin(std::string filename){
         last = layerid;
         unsigned int s_of_r;
         file.read(reinterpret_cast<char *>(&s_of_r), sizeof(int));
-        if (s_of_r)
+        if (s_of_r){
             layers[layerid].neurons[neuronid].resWeights.clear();
+        }
         for (unsigned int r = 0; r < s_of_r; r++){
             unsigned int l, n;
             type w;
