@@ -28,8 +28,8 @@ class ANN{
         struct NEURON;
         struct LAYER;
         struct ResidualWeight;
-        void initializeshit(std::vector<int>& layern, std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
-        std::vector<type> costvec(std::vector<type>& target, unsigned int l);
+        void initializeshit(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
+        std::vector<type> costvec(const std::vector<type>& target, unsigned int l);
         inline static std::vector<LAYER> layers;
         static NEURON& IDtoN(NeuronID nID);
         inline static type (*actfuncHID)(type in);
@@ -84,7 +84,7 @@ ANN<type>::~ANN(){
 }
 
 template<typename type>
-void ANN<type>::initializeshit(std::vector<int>& layern, std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
+void ANN<type>::initializeshit(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
     assert(layern.size() >= 2);
     srand(std::time(NULL));
     layers.resize(layern.size());
@@ -97,7 +97,7 @@ void ANN<type>::initializeshit(std::vector<int>& layern, std::vector<std::pair<N
 }
 
 template<typename type>
-std::vector<type> ANN<type>::costvec(std::vector<type>& target, unsigned int l){
+std::vector<type> ANN<type>::costvec(const std::vector<type>& target, unsigned int l){
     std::vector<type> out;
     for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
         out.push_back(layers[l].neurons[n].activation - target[n]);
@@ -419,12 +419,16 @@ void ANN<type>::deleteLayer(unsigned int lID){
 template<typename type>
 void ANN<type>::addLayer(unsigned int lID, unsigned int s){
     layers.insert(lID+layers.begin(), LAYER(s, lID, layers[lID].neurons.size()));
-    if(lID > 0& & lID < layers.size()-1){
+    if(lID > 0 && lID < layers.size()-1){
         for(unsigned int n = 0; n < layers[lID].neurons.size(); n++){
             if(n <= layers[lID-1].neurons.size()-1){
                 layers[lID].neurons[n].outweights = layers[lID-1].neurons[n].outweights;
                 layers[lID-1].neurons[n].outweights.resize(layers[lID].neurons.size());
                 layers[lID-1].neurons[n].initializeweights();
+            }
+            else{
+                layers[lID].neurons[n].outweights.resize(layers[lID+1].neurons.size());
+                layers[lID].neurons[n].initializeweights();
             }
         }
         for(unsigned int l = lID+1; l < layers.size(); l++){
@@ -557,14 +561,14 @@ template<typename type>
 class EVO_TRAINER{
     private:
         std::vector<ANN<type>*> networks;
-        void mutate(ANN<type>& net);
+        void mutate(ANN<type>& net, const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>>& chance_layer);
     public:
         type (*fitness)(ANN<type>& net);
         EVO_TRAINER() = default;
         EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net));
         ~EVO_TRAINER();
         void mutate_generation(type mutate_rate);
-        void mutate_generation(const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>> chance_layer, type mutate_rate);
+        void mutate_generation(const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>>& chance_layer, type mutate_rate);
         ANN<type>& best_speciman();
 };
 
@@ -582,7 +586,7 @@ EVO_TRAINER<type>::~EVO_TRAINER(){
 }
 
 template<typename type>
-void EVO_TRAINER<type>::mutate(ANN<type>& net){
+void EVO_TRAINER<type>::mutate(ANN<type>& net, const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>>& chance_layer){
 
 }
 
@@ -593,7 +597,7 @@ void EVO_TRAINER<type>::mutate_generation(type mutate_rate){
 
 
 template<typename type>
-void EVO_TRAINER<type>::mutate_generation(const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>> chance_layer, type mutate_rate){
+void EVO_TRAINER<type>::mutate_generation(const std::vector<std::pair<type, type>>& chance_neuron, const std::vector<std::pair<type, type>>& chance_res_weight, const std::vector<std::pair<type, type>>& chance_layer, type mutate_rate){
 
 }
 
