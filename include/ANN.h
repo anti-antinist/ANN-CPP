@@ -47,8 +47,7 @@ class ANN{
         void deserializebin(std::string filename);
         void serializebin(std::string filename);
         void resetStructure(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
-        template<typename lr_type>
-        void backpropagate(const std::vector<type>& input, const std::vector<type>& target, lr_type learn_rate, bool learn_rate_safety);
+        void backpropagate(const std::vector<type>& input, const std::vector<type>& target, type learn_rate, bool learn_rate_safety);
         void deleteNeuron(unsigned int lID);
         void addNeuron(unsigned int lID);
         void deleteLayer(unsigned int lID);
@@ -315,8 +314,7 @@ void ANN<type>::resetStructure(const std::vector<int>& layern, const std::vector
 }
 
 template<typename type>
-template<typename lr_type>
-void ANN<type>::backpropagate(const std::vector<type>& input, const std::vector<type>& target, lr_type learn_rate, bool learn_rate_safety){
+void ANN<type>::backpropagate(const std::vector<type>& input, const std::vector<type>& target, type learn_rate, bool learn_rate_safety){
     forwardpropagate(input);
     type jump_slowdown = 1.0f;
     std::vector<type> delta, prev_delta;
