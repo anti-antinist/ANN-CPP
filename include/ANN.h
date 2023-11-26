@@ -38,6 +38,7 @@ class ANN{
 
         ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
         ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
+        ANN(ANN<type>& net);
         ANN() = default;
         ~ANN();
         type costavg(const std::vector<type>& target);
@@ -58,7 +59,6 @@ class ANN{
         friend struct NEURON;
         friend struct LAYER;
         template<typename TYPE_EVO_TRAINER> friend class EVO_TRAINER;
-        
 };
 
 template<typename type>
@@ -78,6 +78,29 @@ ANN<type>::ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type
     }
     actfuncHID = actfuncHIDp;
     actfuncOUT = actfuncOUTp;
+}
+
+template<typename type>
+ANN<type>::ANN(ANN<type>& net){
+    actfuncHID = net.actfuncHID;
+    actfuncOUT = net.actfuncOUT;
+    for(unsigned int l = 0; l < net.layers.size(); l++){
+        if(l < net.layers.size()-1){
+            layers.push_back(LAYER(net.layers[l].neurons.size(), l, net.layers[l+1].neurons.size(), this));
+        }
+        else{
+            layers.push_back(LAYER(net.layers[l].neurons.size(), l, 0, this));
+        }
+        for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+            for(unsigned int o = 0; o < layers[l].neurons[n].outweights.size(); o++){
+                layers[l].neurons[n].outweights[o] = net.layers[l].neurons[n].outweights[o];
+            }
+            for(unsigned int r = 0; r < net.layers[l].neurons[n].resWeights.size(); r++){
+                layers[l].neurons[n].resWeights.push_back(net.layers[l].neurons[n].resWeights[r]);
+            }
+            layers[l].neurons[n].bias = net.layers[l].neurons[n].bias;
+        }
+    }
 }
 
 template<typename type>
@@ -373,7 +396,18 @@ void ANN<type>::deleteNeuron(unsigned int lID){
     assert(lID >= 0 && lID < layers.size());
     layers[lID].neurons.erase(layers[lID].neurons.end());
     if((layers.size()-1 > lID)){
-        layers[lID].init(layers[lID].neurons.size(), lID, layers[lID+1].neurons.size(), this);        
+        layers[lID].init(layers[lID].neurons.size(), lID, layers[lID+1].neurons.size(), this);  
+        for(unsigned int l = lID; l < layers.size(); l++){
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+                for(unsigned int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
+                    unsigned int from_n = layers[l].neurons[n].resWeights[r].from.n;
+                    if(from_n >= n){
+                        layers[l].neurons[n].resWeights.erase(layers[l].neurons[n].resWeights.begin()+r);
+                        r--;
+                    }
+                }
+            }
+        }      
     }
     else{
         layers[lID].init(layers[lID].neurons.size(), lID, 0, this);            
@@ -419,11 +453,33 @@ void ANN<type>::deleteLayer(unsigned int lID){
         for(unsigned int l = lID; l < layers.size(); l++){
             layers[l].curr_l--;
         }
+        for(unsigned int l = lID; l < layers.size(); l++){
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+                for(unsigned int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
+                    unsigned int from_l = layers[l].neurons[n].resWeights[r].from.l;
+                    if(from_l >= l){
+                        layers[l].neurons[n].resWeights.erase(layers[l].neurons[n].resWeights.begin()+r);
+                        r--;
+                    }
+                }
+            }
+        }
     }
     else if(lID == 0){
         layers.erase(layers.begin());
         for(auto& l : layers){
             l.curr_l--;
+        }
+        for(unsigned int l = 0; l < layers.size(); l++){
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+                for(unsigned int r = 0; r < layers[l].neurons[n].resWeights.size(); r++){
+                    unsigned int from_l = layers[l].neurons[n].resWeights[r].from.l;
+                    if(from_l >= l){
+                        layers[l].neurons[n].resWeights.erase(layers[l].neurons[n].resWeights.begin()+r);
+                        r--;
+                    }
+                }
+            }
         }
     }
     else{
@@ -436,24 +492,24 @@ void ANN<type>::deleteLayer(unsigned int lID){
 
 template<typename type>
 void ANN<type>::addLayer(unsigned int lID, unsigned int s){
-    layers.insert(lID+layers.begin(), LAYER(s, lID, layers[lID].neurons.size(), this));
+    layers.insert(lID+layers.begin(), LAYER());
     if(lID > 0 && lID < layers.size()-1){
+        layers[lID].init(s, lID, layers[lID+1].neurons.size(), this);
         for(unsigned int n = 0; n < layers[lID].neurons.size(); n++){
-            if(n <= layers[lID-1].neurons.size()-1){
-                layers[lID].neurons[n].outweights = layers[lID-1].neurons[n].outweights;
-                layers[lID-1].neurons[n].outweights.resize(layers[lID].neurons.size());
-                layers[lID-1].neurons[n].initializeweights();
-            }
-            else{
-                layers[lID].neurons[n].outweights.resize(layers[lID+1].neurons.size());
-                layers[lID].neurons[n].initializeweights();
+            layers[lID].neurons[n].initializeweights();
+            if(layers[lID-1].neurons.size() > n){
+                for(unsigned int o = 0; o < layers[lID-1].neurons[n].outweights.size(); o++){
+                    layers[lID].neurons[n].outweights[o] = layers[lID-1].neurons[n].outweights[o];
+                }
             }
         }
+        layers[lID-1].init(layers[lID-1].neurons.size(), lID-1, layers[lID].neurons.size(), this);
         for(unsigned int l = lID+1; l < layers.size(); l++){
             layers[l].curr_l++;
         }
     }
     else if(lID == 0){
+        layers[lID].init(s, lID, layers[lID+1].neurons.size(), this);
         for(unsigned int l = 0; l < layers.size(); l++){
             layers[l].curr_l++;
         }
@@ -544,16 +600,15 @@ void ANN<type>::LAYER::init(unsigned int n, unsigned int curr, unsigned int next
     for (auto& i : neurons){
         i.currentID = x;
         x++;
-        if(curr < belong_to->layers.size()-1){
-            i.outweights.resize(next_s);
-            i.initializeweights();
-        }
+        i.outweights.resize(next_s);
+        i.initializeweights();
+        
     }
 }
 
 template<typename type>
 void ANN<type>::LAYER::calcActs(type(actfunc)(type)){
-    for(auto& n : neurons){
+    for(auto& n : belong_to->layers[curr_l].neurons){
         n.activation = 0.0f;
         for(auto& np : belong_to->layers[curr_l-1].neurons){
             n.activation += np.outweights[n.currentID]*np.activation;
@@ -581,56 +636,62 @@ ANN<type>::ResidualWeight::ResidualWeight(NeuronID fromp, type weightp){
 template<typename type> 
 class EVO_TRAINER{
     private:
-        std::vector<ANN<type>> networks;
+        std::vector<ANN<type>*> networks;
         bool re_structured = false;
+        type constant = 0.0f;
         void mutate(ANN<type>& net, type mutate_rate);
     public:
         type (*fitness)(ANN<type>& net);
         EVO_TRAINER() = default;
-        EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure);
-        EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure);
+        EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure, type re_structure_constant);
+        EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure, type re_structure_constant);
         ~EVO_TRAINER();
         void mutate_generation(type mutate_rate);
-        ANN<type> best_speciman();
+        ANN<type>& best_speciman();
 };
 
 template<typename type>
-EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure){
+EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure, type re_structure_constant){
     std::srand((clock()+time(NULL))/2);
     for(unsigned int nn = 0; nn < n_of_networks; nn++){
-        networks.push_back(ANN<type>(structure, ResWeights, actHID, actOUT));
+        networks.push_back(new ANN<type>(structure, ResWeights, actHID, actOUT));
     }
     fitness = fitnessp;
     re_structured = re_structure;
+    constant = re_structure_constant;
 }
 
 template<typename type>
-EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure){
+EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure, type re_structure_constant){
     for(unsigned int nn = 0; nn < n_of_networks; nn++){
-        networks.push_back(ANN(template_ANN));
+        networks.push_back(new ANN(template_ANN));
     }
     fitness = fitnessp;
     mutate(template_ANN, mutate_rate, false);
     re_structured = re_structure;
+    constant = re_structure_constant;
 }
 
 template<typename type>
 EVO_TRAINER<type>::~EVO_TRAINER(){
+    for (auto& network : networks) {
+        delete network;
+    }
     networks.clear();
 }
 
 template<typename type>
 void EVO_TRAINER<type>::mutate(ANN<type>& net, type mutate_rate){
     for(auto& nn : networks){
-        for(unsigned int l = 0; l < nn.layers.size() && l < net.layers.size(); l++){
-            for(unsigned int n = 0; n < nn.layers[l].neurons.size() && n < net.layers[l].neurons.size(); n++){
-                for(unsigned int w = 0; w < nn.layers[l].neurons[n].outweights.size() && w < net.layers[l].neurons[n].outweights.size(); w++){
-                    nn.layers[l].neurons[n].outweights[w] = (net.layers[l].neurons[n].outweights[w] + mutate_rate*(2*rand()/(type)RAND_MAX));
+        for(unsigned int l = 0; l < nn->layers.size() && l < net.layers.size(); l++){
+            for(unsigned int n = 0; n < nn->layers[l].neurons.size() && n < net.layers[l].neurons.size(); n++){
+                for(unsigned int w = 0; w < nn->layers[l].neurons[n].outweights.size() && w < net.layers[l].neurons[n].outweights.size(); w++){
+                    nn->layers[l].neurons[n].outweights[w] = (net.layers[l].neurons[n].outweights[w] + mutate_rate*(2*rand()/(type)RAND_MAX));
                 }
-                for(unsigned int rw = 0; rw < nn.layers[l].neurons[n].resWeights.size() && rw < net.layers[l].neurons[n].resWeights.size(); rw++){
-                    nn.layers[l].neurons[n].resWeights[rw].weight = (nn.layers[l].neurons[n].resWeights[rw].weight + mutate_rate*(2*rand()/(type)RAND_MAX));
+                for(unsigned int rw = 0; rw < nn->layers[l].neurons[n].resWeights.size() && rw < net.layers[l].neurons[n].resWeights.size(); rw++){
+                    nn->layers[l].neurons[n].resWeights[rw].weight = (nn->layers[l].neurons[n].resWeights[rw].weight + mutate_rate*(2*rand()/(type)RAND_MAX));
                 }
-                nn.layers[l].neurons[n].bias = net.layers[l].neurons[n].bias + mutate_rate*(2*rand()/(type)RAND_MAX);
+                nn->layers[l].neurons[n].bias = net.layers[l].neurons[n].bias + mutate_rate*(2*rand()/(type)RAND_MAX);
             }
         }
     }
@@ -638,51 +699,58 @@ void EVO_TRAINER<type>::mutate(ANN<type>& net, type mutate_rate){
 
 template<typename type>
 void EVO_TRAINER<type>::mutate_generation(type mutate_rate){
-    networks[0].serializecsv("../NN.csv");
-    type best_ff = fitness(*networks[0]);
-    ANN<type>& best_nn = networks[0];
-    for(unsigned int nn = 1; nn < networks.size(); nn++){
-        type current_ff = fitness(*networks[nn]);
-        if(current_ff > best_ff){
-            best_ff = current_ff;
-            best_nn = networks[nn];
-        }
-    }
+    networks[0]->serializecsv("../NN.csv");
+    ANN<type>* best_nn = &best_speciman();
     if(re_structured){
         for(unsigned int nn = 0; nn < networks.size(); nn++){
-            if(&best_nn != networks[nn]){
-                networks[nn] = ANN(best_nn);
+            if(best_nn != networks[nn]){
+                delete networks[nn];
+                networks[nn] = new ANN(*best_nn);
             }
         }
     }
     mutate(*best_nn, mutate_rate);
     if(re_structured){
         for(unsigned int nn = 0; nn < networks.size(); nn++){
-            bool to_add_l = int(mutate_rate * double(rand()%3))%2;
+            bool to_add_l = int(mutate_rate * double(rand() * constant))%2;
             if(to_add_l){
-                networks[nn].addLayer(networks[nn].layers.size()/2, 5);
+                networks[nn]->addLayer(networks[nn]->layers.size()/2, 5);
             }
-            else if(networks[nn].layers.size() != 2){
-                networks[nn].deleteLayer(networks[nn].layers.size()/2);
+            else if(networks[nn]->layers.size() != 2){
+                networks[nn]->deleteLayer(networks[nn]->layers.size()/2);
             }
-            for(unsigned int l = 1; l < networks[nn].layers.size()-1; l++){
+            for(unsigned int l = 1; l < networks[nn]->layers.size()-1; l++){
                 bool to_add_n = int(mutate_rate * double(rand()%3))%2;
                 if(to_add_n){
-                    networks[nn].addNeuron(l);
+                    networks[nn]->addNeuron(l);
                 }
-                else if (networks[nn].layers[l].neurons.size() > 1){
-                    networks[nn].deleteNeuron(l);
+                else if (networks[nn]->layers[l].neurons.size() > 1){
+                    networks[nn]->deleteNeuron(l);
                 }
-                
+                for(unsigned int n = 0; n < networks[nn]->layers[l].neurons.size(); n++){
+                    bool to_add_r = int(mutate_rate * double(rand() * constant))%2;
+                    if(to_add_r){
+                        unsigned int from_l = int(l*(double(rand())/RAND_MAX));
+                        unsigned int from_n = int(networks[nn]->layers[from_l].neurons.size()*(double(rand())/RAND_MAX));
+                        type weight = 2*rand()/(type)RAND_MAX;
+                        networks[nn]->AddResidualWeight(NeuronID(from_l, from_n), NeuronID(l, n), weight);
+                    }
+                    else if(networks[nn]->layers[l].neurons[n].resWeights.size() > 0){
+                        unsigned int from_l = int(l*(double(rand())/RAND_MAX));
+                        unsigned int from_n = int(networks[nn]->layers[from_l].neurons.size()*(double(rand())/RAND_MAX));
+                        unsigned int to_delete = rand()%networks[nn]->layers[l].neurons[n].resWeights.size();
+                        networks[nn]->DeleteResidualWeight(NeuronID(from_l, from_n), NeuronID(l, n));
+                    }
+                }
             }
         }   
     }
 }
 
 template<typename type>
-ANN<type> EVO_TRAINER<type>::best_speciman(){
+ANN<type>& EVO_TRAINER<type>::best_speciman(){
     type best_ff = fitness(*networks[0]);
-    ANN<type>& best_nn = networks[0];
+    ANN<type>* best_nn = networks[0];
     for(unsigned int nn = 1; nn < networks.size(); nn++){
         type current_ff = fitness(*networks[nn]);
         if(current_ff > best_ff){
@@ -690,5 +758,5 @@ ANN<type> EVO_TRAINER<type>::best_speciman(){
             best_nn = networks[nn];
         }
     }
-    return best_nn;
+    return *best_nn;
 }
