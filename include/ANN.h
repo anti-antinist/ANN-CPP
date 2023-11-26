@@ -6,7 +6,6 @@
 #include<cassert>
 #include<sstream>
 #include<utility>
-#include<iostream>
 
 struct NeuronID{
     unsigned int l = 0;
