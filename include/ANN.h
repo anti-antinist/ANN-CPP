@@ -14,8 +14,9 @@ struct NeuronID{
         : l(l), n(n){};
     NeuronID() = default;
     bool operator==(NeuronID n){
-        if (n.l == this->l && n.n == this->n)
+        if (n.l == this->l && n.n == this->n){
             return true;
+        }
         return false;
     }
 };
@@ -289,7 +290,6 @@ void ANN<type>::deserializebin(std::string filename){
             layers[layerid].neurons[neuronid].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
         }
     }
-
     file.close();
 }
 
@@ -635,39 +635,38 @@ ANN<type>::ResidualWeight::ResidualWeight(NeuronID fromp, type weightp){
 template<typename type> 
 class EVO_TRAINER{
     private:
+
         std::vector<ANN<type>*> networks;
-        bool re_structured = false;
         type constant = 0.0f;
         void mutate(ANN<type>& net, type mutate_rate);
     public:
+
         type (*fitness)(ANN<type>& net);
         EVO_TRAINER() = default;
-        EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure, type re_structure_constant);
-        EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure, type re_structure_constant);
+        EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), type re_structure_constant);
+        EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant);
         ~EVO_TRAINER();
-        void mutate_generation(type mutate_rate);
+        void mutate_generation(bool re_structure, type mutate_rate);
         ANN<type>& best_speciman();
 };
 
 template<typename type>
-EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), bool re_structure, type re_structure_constant){
+EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), type re_structure_constant){
     std::srand((clock()+time(NULL))/2);
     for(unsigned int nn = 0; nn < n_of_networks; nn++){
         networks.push_back(new ANN<type>(structure, ResWeights, actHID, actOUT));
     }
     fitness = fitnessp;
-    re_structured = re_structure;
     constant = re_structure_constant;
 }
 
 template<typename type>
-EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, bool re_structure, type re_structure_constant){
+EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant){
     for(unsigned int nn = 0; nn < n_of_networks; nn++){
         networks.push_back(new ANN(template_ANN));
     }
     fitness = fitnessp;
-    mutate(template_ANN, mutate_rate, false);
-    re_structured = re_structure;
+    mutate(template_ANN, mutate_rate);
     constant = re_structure_constant;
 }
 
@@ -697,10 +696,10 @@ void EVO_TRAINER<type>::mutate(ANN<type>& net, type mutate_rate){
 }
 
 template<typename type>
-void EVO_TRAINER<type>::mutate_generation(type mutate_rate){
+void EVO_TRAINER<type>::mutate_generation(bool re_structure, type mutate_rate){
     networks[0]->serializecsv("../NN.csv");
     ANN<type>* best_nn = &best_speciman();
-    if(re_structured){
+    if(re_structure){
         for(unsigned int nn = 0; nn < networks.size(); nn++){
             if(best_nn != networks[nn]){
                 delete networks[nn];
@@ -709,7 +708,7 @@ void EVO_TRAINER<type>::mutate_generation(type mutate_rate){
         }
     }
     mutate(*best_nn, mutate_rate);
-    if(re_structured){
+    if(re_structure){
         for(unsigned int nn = 0; nn < networks.size(); nn++){
             bool to_add_l = int(mutate_rate * double(rand() * constant))%2;
             if(to_add_l){
@@ -719,7 +718,7 @@ void EVO_TRAINER<type>::mutate_generation(type mutate_rate){
                 networks[nn]->deleteLayer(networks[nn]->layers.size()/2);
             }
             for(unsigned int l = 1; l < networks[nn]->layers.size()-1; l++){
-                bool to_add_n = int(mutate_rate * double(rand()%3))%2;
+                bool to_add_n = int(mutate_rate * double(rand() * constant))%2;
                 if(to_add_n){
                     networks[nn]->addNeuron(l);
                 }
