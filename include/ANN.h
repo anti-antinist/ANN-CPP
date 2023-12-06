@@ -11,8 +11,7 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n)
-            : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
             if (n.l == this->l && n.n == this->n){
@@ -24,6 +23,7 @@
 
     template<typename type>
     class ANN{
+
         private:
 
             struct NEURON;
@@ -35,6 +35,7 @@
             NEURON& IDtoN(NeuronID nID);
             type (*actfuncHID)(type in);
             type (*actfuncOUT)(type in);
+
         public:
 
             ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
@@ -258,9 +259,7 @@
         file.read(reinterpret_cast<char *>(&layerno), sizeof(int));
         std::vector<unsigned int> layern(layerno);
         file.read(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
-
         initializeshit(layern, std::vector<std::pair<NeuronID, NeuronID>>{});
-        
         unsigned int layerid, neuronid, last = 0;
         while (file.read(reinterpret_cast<char *>(&layerid), sizeof(int))&&
             file.read(reinterpret_cast<char *>(&neuronid), sizeof(int))){
@@ -302,7 +301,6 @@
         }
         unsigned int layerno = layers.size();
         std::vector<unsigned int> layern;
-
         for (auto& l : layers){
             layern.push_back(l.neurons.size());
         }
@@ -341,6 +339,7 @@
 
     template<typename type>
     void ANN<type>::backpropagate(const std::vector<type>& input, const std::vector<type>& target, type learn_rate, bool learn_rate_safety){
+        assert(target.size() == layers.back().neurons.size());
         forwardpropagate(input);
         type jump_slowdown = 1.0f;
         std::vector<type> delta, prev_delta;
@@ -543,6 +542,7 @@
 
     template<typename type> 
     struct ANN<type>::NEURON{
+
         type bias = 0.0f;
         unsigned int currentID = 0;
         type activation = 0.0f;
@@ -552,6 +552,7 @@
         ~NEURON();
         void initializeweights();
         friend struct LAYER;
+
     };
 
     template<typename type> 
@@ -568,16 +569,18 @@
 
     template<typename type> 
     struct ANN<type>::LAYER{
-    public:
 
-        ANN<type>* belong_to = nullptr;
-        std::vector<NEURON> neurons;
-        unsigned int curr_l = 0;
-        LAYER(unsigned int n, unsigned int curr, unsigned int next_s, ANN<type>* pbelong_to);
-        LAYER() = default;
-        ~LAYER();
-        void init(unsigned int n, unsigned int curr, unsigned int next_s, ANN<type>* pbelong_to);
-        void calcActs(type(actfunc)(type));
+        public:
+
+            ANN<type>* belong_to = nullptr;
+            std::vector<NEURON> neurons;
+            unsigned int curr_l = 0;
+            LAYER(unsigned int n, unsigned int curr, unsigned int next_s, ANN<type>* pbelong_to);
+            LAYER() = default;
+            ~LAYER();
+            void init(unsigned int n, unsigned int curr, unsigned int next_s, ANN<type>* pbelong_to);
+            void calcActs(type(actfunc)(type));
+
     };
 
     template<typename type>
@@ -593,6 +596,7 @@
 
     template<typename type>
     void ANN<type>::LAYER::init(unsigned int n, unsigned int curr, unsigned int next_s, ANN<type>* pbelong_to){
+        assert(n > 0);
         neurons.resize(n, NEURON());
         curr_l = curr;
         unsigned int x = 0;
@@ -622,9 +626,11 @@
 
     template<typename type> 
     struct ANN<type>::ResidualWeight{
+
         NeuronID from;
         type weight = 0.0f;
         ResidualWeight(NeuronID fromp, type weightp);
+
     };
 
     template<typename type> 
@@ -635,6 +641,7 @@
 
     template<typename type> 
     class EVO_TRAINER{
+
         private:
 
             std::vector<ANN<type>*> networks;
@@ -649,6 +656,7 @@
             ~EVO_TRAINER();
             void mutate_generation(bool re_structure, type mutate_rate);
             ANN<type>& best_speciman();
+
     };
 
     template<typename type>
