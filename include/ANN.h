@@ -11,8 +11,7 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n) 
-            : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
             if (n.l == this->l && n.n == this->n){
@@ -552,13 +551,14 @@
         NEURON() = default;
         ~NEURON();
         void initializeweights();
-        friend struct LAYER;
 
+        friend struct LAYER;
     };
 
     template<typename type> 
     ANN<type>::NEURON::~NEURON(){
         outweights.clear();
+        resWeights.clear();
     }
 
     template<typename type> 
@@ -592,6 +592,9 @@
 
     template<typename type>
     ANN<type>::LAYER::~LAYER(){
+        if(belong_to != nullptr) {
+            delete belong_to;
+        }
         neurons.clear();
     }
 
@@ -606,8 +609,7 @@
             i.currentID = x;
             x++;
             i.outweights.resize(next_s);
-            i.initializeweights();
-            
+            i.initializeweights();   
         }
     }
 
@@ -627,11 +629,9 @@
 
     template<typename type> 
     struct ANN<type>::ResidualWeight{
-
         NeuronID from;
         type weight = 0.0f;
         ResidualWeight(NeuronID fromp, type weightp);
-
     };
 
     template<typename type> 
