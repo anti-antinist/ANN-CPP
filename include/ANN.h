@@ -1,4 +1,5 @@
 #ifndef ANN_H
+
     #define ANN_H
     #include<vector>
     #include<string>
@@ -11,7 +12,8 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) 
+            : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
             if (n.l == this->l && n.n == this->n){
@@ -570,7 +572,6 @@
 
     template<typename type> 
     struct ANN<type>::LAYER{
-
         public:
 
             ANN<type>* belong_to = nullptr;
@@ -592,9 +593,6 @@
 
     template<typename type>
     ANN<type>::LAYER::~LAYER(){
-        if(belong_to != nullptr) {
-            delete belong_to;
-        }
         neurons.clear();
     }
 
@@ -629,6 +627,7 @@
 
     template<typename type> 
     struct ANN<type>::ResidualWeight{
+        
         NeuronID from;
         type weight = 0.0f;
         ResidualWeight(NeuronID fromp, type weightp);
@@ -767,4 +766,5 @@
         }
         return *best_nn;
     }
+
 #endif
