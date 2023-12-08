@@ -627,7 +627,7 @@
 
     template<typename type> 
     struct ANN<type>::ResidualWeight{
-        
+
         NeuronID from;
         type weight = 0.0f;
         ResidualWeight(NeuronID fromp, type weightp);
@@ -652,7 +652,7 @@
             type (*fitness)(ANN<type>& net);
             EVO_TRAINER() = default;
             EVO_TRAINER(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), type re_structure_constant);
-            EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant);
+            EVO_TRAINER(const unsigned int n_of_networks, const ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant);
             ~EVO_TRAINER();
             void mutate_generation(bool re_structure, type mutate_rate);
             ANN<type>& best_speciman();
@@ -670,7 +670,7 @@
     }
 
     template<typename type>
-    EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant){
+    EVO_TRAINER<type>::EVO_TRAINER(const unsigned int n_of_networks, const ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant){
         for(unsigned int nn = 0; nn < n_of_networks; nn++){
             networks.push_back(new ANN(template_ANN));
         }
