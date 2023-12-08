@@ -11,7 +11,8 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) 
+            : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
             if (n.l == this->l && n.n == this->n){
@@ -706,7 +707,6 @@
 
     template<typename type>
     void EVO_TRAINER<type>::mutate_generation(bool re_structure, type mutate_rate){
-        networks[0]->serializecsv("../NN.csv");
         ANN<type>* best_nn = &best_speciman();
         if(re_structure){
             for(unsigned int nn = 0; nn < networks.size(); nn++){
