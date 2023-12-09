@@ -594,6 +594,7 @@
     template<typename type>
     ANN<type>::LAYER::~LAYER(){
         neurons.clear();
+        belong_to = nullptr;
     }
 
     template<typename type>
