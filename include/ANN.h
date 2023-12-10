@@ -30,7 +30,7 @@
             struct NEURON;
             struct LAYER;
             struct ResidualWeight;
-            void initializeshit(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
+            void initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
             std::vector<type> costvec(const std::vector<type>& target, unsigned int l);
             std::vector<LAYER> layers;
             NEURON& IDtoN(NeuronID nID);
@@ -66,7 +66,7 @@
 
     template<typename type>
     ANN<type>::ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
-        initializeshit(layern, ResWeights);
+        initialize(layern, ResWeights);
         actfuncHID = actfuncHIDp;
         actfuncOUT = actfuncOUTp;
     }
@@ -112,7 +112,7 @@
     }
 
     template<typename type>
-    void ANN<type>::initializeshit(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
+    void ANN<type>::initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
         assert(layern.size() >= 2);
         std::srand((clock()+time(NULL))/2);
         layers.resize(layern.size());
@@ -185,7 +185,7 @@
             layerinp.push_back(std::atoi((tmp.c_str())));
         }
         unsigned int l = 0, n = 0;
-        initializeshit(layerinp, std::vector<std::pair<NeuronID, NeuronID>>{});
+        initialize(layerinp, std::vector<std::pair<NeuronID, NeuronID>>{});
         while (std::getline(file, line)){
             std::stringstream().swap(input);
             input << line;
@@ -260,7 +260,7 @@
         file.read(reinterpret_cast<char *>(&layerno), sizeof(int));
         std::vector<unsigned int> layern(layerno);
         file.read(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
-        initializeshit(layern, std::vector<std::pair<NeuronID, NeuronID>>{});
+        initialize(layern, std::vector<std::pair<NeuronID, NeuronID>>{});
         unsigned int layerid, neuronid, last = 0;
         while (file.read(reinterpret_cast<char *>(&layerid), sizeof(int))&&
             file.read(reinterpret_cast<char *>(&neuronid), sizeof(int))){
@@ -335,7 +335,7 @@
 
     template<typename type> 
     void ANN<type>::resetStructure(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
-        initializeshit(layern, ResWeights);
+        initialize(layern, ResWeights);
     }
 
     template<typename type>
