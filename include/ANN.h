@@ -12,7 +12,8 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) 
+            : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
             if (n.l == this->l && n.n == this->n){
@@ -646,6 +647,7 @@
 
             std::vector<ANN<type>*> networks;
             type constant = 0.0f;
+            bool diff = false;
             void mutate(ANN<type>& net, type mutate_rate);
         public:
 
@@ -707,13 +709,14 @@
     template<typename type>
     void EVO_TRAINER<type>::mutate_generation(bool re_structure, type mutate_rate){
         ANN<type>* best_nn = &best_speciman();
-        if(re_structure){
+        if(re_structure || diff){
             for(unsigned int nn = 0; nn < networks.size(); nn++){
                 if(best_nn != networks[nn]){
                     delete networks[nn];
                     networks[nn] = new ANN(*best_nn);
                 }
             }
+            diff = false;
         }
         mutate(*best_nn, mutate_rate);
         if(re_structure){
@@ -749,7 +752,8 @@
                         }
                     }
                 }
-            }   
+            }
+            diff = true;   
         }
     }
 
