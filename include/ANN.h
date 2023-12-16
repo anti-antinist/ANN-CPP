@@ -12,14 +12,10 @@
     struct NeuronID{
         unsigned int l = 0;
         unsigned int n = 0;
-        NeuronID(unsigned int l, unsigned int n) 
-            : l(l), n(n){};
+        NeuronID(unsigned int l, unsigned int n) : l(l), n(n){};
         NeuronID() = default;
         bool operator==(NeuronID n){
-            if (n.l == this->l && n.n == this->n){
-                return true;
-            }
-            return false;
+            return n.l == this->l && n.n == this->n;
         }
     };
 
