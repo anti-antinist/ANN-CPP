@@ -759,7 +759,7 @@
     void EVO_TRAINER<type>::mutate_generation(bool re_structure, ANN<type>& net, type mutate_rate){
         if(re_structure || diff){
             for(unsigned int nn = 0; nn < networks.size(); nn++){
-                if(best_nn != networks[nn]){
+                if(net != networks[nn]){
                     delete networks[nn];
                     networks[nn] = new ANN(net);
                 }
