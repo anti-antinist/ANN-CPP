@@ -48,6 +48,7 @@
             void deserializebin(std::string filename);
             void serializebin(std::string filename);
             void resetStructure(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
+            void resetStructure(const ANN<type>& net);
             void backpropagate(const std::vector<type>& input, const std::vector<type>& target, type learn_rate, bool learn_rate_safety);
             void deleteNeuron(unsigned int lID);
             void addNeuron(unsigned int lID);
@@ -333,6 +334,30 @@
     template<typename type> 
     void ANN<type>::resetStructure(const std::vector<int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
         initialize(layern, ResWeights);
+    }
+
+    template<typename type>
+    void ANN<type>::resetStructure(const ANN<type>& net){
+        actfuncHID = net.actfuncHID;
+        actfuncOUT = net.actfuncOUT;
+        layers.clear();
+        for(unsigned int l = 0; l < net.layers.size(); l++){
+            if(l < net.layers.size()-1){
+                layers.push_back(LAYER(net.layers[l].neurons.size(), l, net.layers[l+1].neurons.size(), this));
+            }
+            else{
+                layers.push_back(LAYER(net.layers[l].neurons.size(), l, 0, this));
+            }
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+                for(unsigned int o = 0; o < layers[l].neurons[n].outweights.size(); o++){
+                    layers[l].neurons[n].outweights[o] = net.layers[l].neurons[n].outweights[o];
+                }
+                for(unsigned int r = 0; r < net.layers[l].neurons[n].resWeights.size(); r++){
+                    layers[l].neurons[n].resWeights.push_back(net.layers[l].neurons[n].resWeights[r]);
+                }
+                layers[l].neurons[n].bias = net.layers[l].neurons[n].bias;
+            }
+        }
     }
 
     template<typename type>
