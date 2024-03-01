@@ -27,7 +27,7 @@
             struct NEURON;
             struct LAYER;
             struct ResidualWeight;
-            void initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
+            void initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons);
             std::vector<type> costvec(const std::vector<type>& target, unsigned int l);
             std::vector<LAYER> layers;
             NEURON& IDtoN(NeuronID nID);
@@ -36,7 +36,7 @@
 
         public:
 
-            ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
+            ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
             ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
             ANN(const ANN<type>& net);
             ANN() = default;
@@ -63,15 +63,15 @@
     };
 
     template<typename type>
-    ANN<type>::ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
-        initialize(layern, ResWeights);
+    ANN<type>::ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
+        initialize(layern, ResWeights, Rec_Neurons);
         actfuncHID = actfuncHIDp;
         actfuncOUT = actfuncOUTp;
     }
 
     template<typename type> 
     ANN<type>::ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
-        if (isBIN){
+        if(isBIN){
             deserializebin(filename);
         }
         else{
@@ -100,6 +100,7 @@
                     layers[l].neurons[n].resWeights.push_back(net.layers[l].neurons[n].resWeights[r]);
                 }
                 layers[l].neurons[n].bias = net.layers[l].neurons[n].bias;
+                layers[l].neurons[n].is_Rec = net.layers[l].neurons[n].is_Rec;
             }
         }
     }
@@ -110,22 +111,26 @@
     }
 
     template<typename type>
-    void ANN<type>::initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
+    void ANN<type>::initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons){
         assert(layern.size() >= 2);
         std::srand((clock()+time(NULL))/2);
+        layers.clear();
         layers.resize(layern.size());
-        for (unsigned int i = 0; i < layers.size(); i++){
+        for(unsigned int i = 0; i < layers.size(); i++){
             layers[i].init(layern[i], i, (layern.size()-1 == i) ? 0 : layern[i+1], this);
         }
-        for (auto& r : ResWeights){
+        for(auto& r : ResWeights){
             AddResidualWeight(r.first, r.second, 1.0f);
+        }
+        for(auto& n : Rec_Neurons){
+            IDtoN(n).is_Rec = true;
         }
     }
 
     template<typename type>
     std::vector<type> ANN<type>::costvec(const std::vector<type>& target, unsigned int l){
         std::vector<type> out;
-        for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
+        for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
             out.push_back(layers[l].neurons[n].activation - target[n]);
         }
         return out;
@@ -140,7 +145,7 @@
     type ANN<type>::costavg(const std::vector<type>& target){
         assert(layers.back().neurons.size() == target.size());
         type cost = 0.0f;
-        for (unsigned int i = 0; i < layers.back().neurons.size(); i++){
+        for(unsigned int i = 0; i < layers.back().neurons.size(); i++){
             cost += layers.back().neurons[i].activation - target[i];
         }
         cost = cost;
@@ -151,15 +156,15 @@
     template<typename type>
     std::vector<type> ANN<type>::forwardpropagate(const std::vector<type>& input){
         assert(input.size() == layers[0].neurons.size());
-        for (auto& n : layers[0].neurons){
+        for(auto& n : layers[0].neurons){
             n.activation = input[n.currentID] + n.bias;
         }
-        for (unsigned int i = 1; i < layers.size() - 1; i++){
+        for(unsigned int i = 1; i < layers.size() - 1; i++){
             layers[i].calcActs(*actfuncHID);
         }
         layers.back().calcActs(*actfuncOUT);
         std::vector<type> out;
-        for (auto& n : layers.back().neurons){
+        for(auto& n : layers.back().neurons){
             out.push_back(n.activation);
         }
         return out;
@@ -168,7 +173,7 @@
     template<typename type>
     void ANN<type>::deserializecsv(std::string filename){
         std::ifstream file(filename);
-        if (!file.is_open()){
+        if(!file.is_open()){
             return;
         }
         std::string line;
@@ -183,7 +188,7 @@
             layerinp.push_back(std::atoi((tmp.c_str())));
         }
         unsigned int l = 0, n = 0;
-        initialize(layerinp, std::vector<std::pair<NeuronID, NeuronID>>{});
+        initialize(layerinp, std::vector<std::pair<NeuronID, NeuronID>>{}, std::vector<NeuronID>{});
         while (std::getline(file, line)){
             std::stringstream().swap(input);
             input << line;
@@ -191,7 +196,7 @@
             l = atoi(tmp.c_str());
             std::getline(input, tmp, ',');
             n = atoi(tmp.c_str());
-            for (auto& i : layers[l].neurons[n].outweights){
+            for(auto& i : layers[l].neurons[n].outweights){
                 std::getline(input, tmp, ',');
                 i = atof(tmp.c_str());
             }
@@ -200,7 +205,7 @@
             unsigned int s_of_r = 0;
             std::getline(input, tmp, ',');
             s_of_r = atoi(tmp.c_str());
-            for (unsigned int r = 0; r < s_of_r; r++){
+            for(unsigned int r = 0; r < s_of_r; r++){
                 unsigned int lf = 0, nf = 0;
                 std::getline(input, tmp, ',');
                 lf = atof(tmp.c_str());
@@ -211,6 +216,10 @@
                 w = atof(tmp.c_str());
                 layers[l].neurons[n].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
             }
+            std::getline(input, tmp, ',');
+            layers[l].neurons[n].is_Rec = (tmp == "0") ? false : true;
+            std::getline(input, tmp, ',');
+            layers[l].neurons[n].Rec_weight = tmp;
         }
         input.clear();
         file.close();
@@ -219,75 +228,74 @@
     template<typename type>
     void ANN<type>::serializecsv(std::string filename){
         std::ofstream file(filename);
-        if (!file.is_open()){
+        if(!file.is_open()){
             return;
         }
-        std::string line;
-        for (unsigned int i = 0; i < layers.size(); i++){
-            line += std::to_string(layers[i].neurons.size()) + ((i < layers.size() - 1) ? "," : "");
+        for(unsigned int i = 0; i < layers.size(); i++){
+            file << std::to_string(layers[i].neurons.size()) + ((i < layers.size() - 1) ? "," : "");
         }
-        file << line.append("\n");
-        for (unsigned int l = 0; l < layers.size(); l++){
-            for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
-                line = std::to_string(l) + "," + std::to_string(n);
-                if (l < layers.size() - 1){
-                    for (unsigned int w = 0; w < layers[l].neurons[n].outweights.size(); w++){
-                        line += "," + std::to_string(layers[l].neurons[n].outweights[w]);
+        file << "\n";
+        for(unsigned int l = 0; l < layers.size(); l++){
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
+                file << std::to_string(l) + "," + std::to_string(n);
+                if(l < layers.size() - 1){
+                    for(unsigned int w = 0; w < layers[l].neurons[n].outweights.size(); w++){
+                        file << "," + std::to_string(layers[l].neurons[n].outweights[w]);
                     }
                 }
-                line += "," + std::to_string(layers[l].neurons[n].bias);
+                file << "," + std::to_string(layers[l].neurons[n].bias);
                 unsigned int s_of_r = layers[l].neurons[n].resWeights.size();
-                line += "," + std::to_string(s_of_r);
-                for (unsigned int r = 0; r < s_of_r; r++){
-                    line += "," + std::to_string(layers[l].neurons[n].resWeights[r].from.l) + "," + std::to_string(layers[l].neurons[n].resWeights[r].from.n) + "," + std::to_string(layers[l].neurons[n].resWeights[r].weight);
+                file << "," + std::to_string(s_of_r) + ",";
+                for(unsigned int r = 0; r < s_of_r; r++){
+                    file << std::to_string(layers[l].neurons[n].resWeights[r].from.l) + "," + std::to_string(layers[l].neurons[n].resWeights[r].from.n) + "," + std::to_string(layers[l].neurons[n].resWeights[r].weight) + ",";
                 }
-                file << line << "\n";
+                file << layers[l].neurons[n].is_Rec << "," << layers[l].neurons[n].Rec_weight;
+                file << "\n";
             }
         }
-        line.clear();
         file.close();
     }
 
     template<typename type>
     void ANN<type>::deserializebin(std::string filename){
         std::ifstream file(filename, std::ios::binary);
-        if (!file.is_open()){
+        if(!file.is_open()){
             return;
         }
         unsigned int layerno;
-        file.read(reinterpret_cast<char *>(&layerno), sizeof(int));
+        file.read(reinterpret_cast<char*>(&layerno), sizeof(int));
         std::vector<unsigned int> layern(layerno);
-        file.read(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
-        initialize(layern, std::vector<std::pair<NeuronID, NeuronID>>{});
+        file.read(reinterpret_cast<char*>(layern.data()), layerno * sizeof(int));
+        initialize(layern, std::vector<std::pair<NeuronID, NeuronID>>{}, std::vector<NeuronID>{});
         unsigned int layerid, neuronid, last = 0;
-        while (file.read(reinterpret_cast<char *>(&layerid), sizeof(int))&&
-            file.read(reinterpret_cast<char *>(&neuronid), sizeof(int))){
-            if (last > layerid){
+        while (file.read(reinterpret_cast<char*>(&layerid), sizeof(int))&&
+            file.read(reinterpret_cast<char*>(&neuronid), sizeof(int))){
+            if(last > layerid){
                 break;
             }
             type weight = 0.0f;
-            for (auto& w : layers[layerid].neurons[neuronid].outweights){
-                file.read(reinterpret_cast<char *>(&weight), sizeof(type));
-                w = weight;
+            for(auto& w : layers[layerid].neurons[neuronid].outweights){
+                file.read(reinterpret_cast<char*>(&w), sizeof(type));
             }
             type bias;
-            file.read(reinterpret_cast<char *>(&bias), sizeof(type));
-            layers[layerid].neurons[neuronid].bias = bias;
+            file.read(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].bias), sizeof(type));
             last = layerid;
             unsigned int s_of_r;
-            file.read(reinterpret_cast<char *>(&s_of_r), sizeof(int));
-            if (s_of_r){
+            file.read(reinterpret_cast<char*>(&s_of_r), sizeof(int));
+            if(s_of_r){
                 layers[layerid].neurons[neuronid].resWeights.clear();
             }
-            for (unsigned int r = 0; r < s_of_r; r++){
+            for(unsigned int r = 0; r < s_of_r; r++){
                 unsigned int l, n;
                 type w;
-                file.read(reinterpret_cast<char *>(&l), sizeof(int));
-                file.read(reinterpret_cast<char *>(&n), sizeof(int));
-                file.read(reinterpret_cast<char *>(&w), sizeof(type));
+                file.read(reinterpret_cast<char*>(&l), sizeof(int));
+                file.read(reinterpret_cast<char*>(&n), sizeof(int));
+                file.read(reinterpret_cast<char*>(&w), sizeof(type));
 
                 layers[layerid].neurons[neuronid].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
             }
+            file.read(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].is_Rec), sizeof(bool));
+            file.read(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].Rec_weight), sizeof(type));
         }
         file.close();
     }
@@ -295,37 +303,39 @@
     template<typename type>
     void ANN<type>::serializebin(std::string filename){
         std::ofstream file(filename, std::ios::binary);
-        if (!file.is_open()){
+        if(!file.is_open()){
             return;
         }
         unsigned int layerno = layers.size();
         std::vector<unsigned int> layern;
-        for (auto& l : layers){
+        for(auto& l : layers){
             layern.push_back(l.neurons.size());
         }
-        file.write(reinterpret_cast<char *>(&layerno), sizeof(int));
-        file.write(reinterpret_cast<char *>(layern.data()), layerno * sizeof(int));
+        file.write(reinterpret_cast<char*>(&layerno), sizeof(int));
+        file.write(reinterpret_cast<char*>(layern.data()), layerno * sizeof(int));
 
-        for (unsigned int l = 0; l < layerno; l++){
-            for (unsigned int n = 0; n < layers[l].neurons.size(); n++){
+        for(unsigned int l = 0; l < layerno; l++){
+            for(unsigned int n = 0; n < layers[l].neurons.size(); n++){
                 unsigned int layerid = l, neuronid = n;
-                file.write(reinterpret_cast<char *>(&layerid), sizeof(int));
-                file.write(reinterpret_cast<char *>(&neuronid), sizeof(int));
-                for (unsigned int w = 0; w < layers[l].neurons[n].outweights.size(); w++){
+                file.write(reinterpret_cast<char*>(&layerid), sizeof(int));
+                file.write(reinterpret_cast<char*>(&neuronid), sizeof(int));
+                for(unsigned int w = 0; w < layers[l].neurons[n].outweights.size(); w++){
                     type weight = layers[l].neurons[n].outweights[w];
-                    file.write(reinterpret_cast<char *>(&weight), sizeof(type));
+                    file.write(reinterpret_cast<char*>(&weight), sizeof(type));
                 }
                 type bias = layers[l].neurons[n].bias;
-                file.write(reinterpret_cast<char *>(&bias), sizeof(type));
+                file.write(reinterpret_cast<char*>(&bias), sizeof(type));
                 unsigned int s_of_r = layers[l].neurons[n].resWeights.size();
-                file.write(reinterpret_cast<char *>(&s_of_r), sizeof(int));
-                for (unsigned int r = 0; r < s_of_r; r++){
+                file.write(reinterpret_cast<char*>(&s_of_r), sizeof(int));
+                for(unsigned int r = 0; r < s_of_r; r++){
                     unsigned int lf = layers[l].neurons[n].resWeights[r].from.l, nf = layers[l].neurons[n].resWeights[r].from.n;
                     type w = layers[l].neurons[n].resWeights[r].weight;
-                    file.write(reinterpret_cast<char *>(&lf), sizeof(int));
-                    file.write(reinterpret_cast<char *>(&nf), sizeof(int));
-                    file.write(reinterpret_cast<char *>(&w), sizeof(type));
+                    file.write(reinterpret_cast<char*>(&lf), sizeof(int));
+                    file.write(reinterpret_cast<char*>(&nf), sizeof(int));
+                    file.write(reinterpret_cast<char*>(&w), sizeof(type));
                 }
+                file.write(reinterpret_cast<char*>(&layers[l].neurons[n].is_Rec), sizeof(bool));
+                file.write(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].Rec_weight), sizeof(type));
             }
         }
         file.close();
@@ -387,7 +397,7 @@
                         }
                     }
                     delta[i] = layers[l].neurons[i].activation*(1-layers[l].neurons[i].activation)*sum;
-                    for (unsigned int r = 0; r < layers[l].neurons[i].resWeights.size(); r++){
+                    for(unsigned int r = 0; r < layers[l].neurons[i].resWeights.size(); r++){
                         res_w.push_back(std::pair<ResidualWeight& , type>(layers[l].neurons[i].resWeights[r], delta[i]));
                     }
                 }
@@ -569,6 +579,8 @@
         type bias = 0.0f;
         unsigned int currentID = 0;
         type activation = 0.0f;
+        bool is_Rec = 0;
+        type Rec_weight; 
         std::vector<type> outweights;
         std::vector<ResidualWeight> resWeights;
         NEURON() = default;
@@ -586,9 +598,10 @@
 
     template<typename type> 
     void ANN<type>::NEURON::initializeweights(){
-        for (type& i : outweights)
+        for(type& i : outweights)
             i = 2*rand()/(type)RAND_MAX;
         bias = 2*rand()/(type)RAND_MAX;
+        Rec_weight = 2*rand()/(type)RAND_MAX;
     }
 
     template<typename type> 
@@ -625,7 +638,7 @@
         curr_l = curr;
         unsigned int x = 0;
         belong_to = pbelong_to;
-        for (auto& i : neurons){
+        for(auto& i : neurons){
             i.currentID = x;
             x++;
             i.outweights.resize(next_s);
@@ -636,7 +649,12 @@
     template<typename type>
     void ANN<type>::LAYER::calcActs(type(actfunc)(type)){
         for(auto& n : belong_to->layers[curr_l].neurons){
-            n.activation = 0.0f;
+            if(n.is_Rec){
+                n.activation = n.activation * n.Rec_weight;
+            }
+            else{
+                n.activation = 0.0f;
+            }
             for(auto& np : belong_to->layers[curr_l-1].neurons){
                 n.activation += np.outweights[n.currentID]*np.activation;
             }
@@ -706,7 +724,7 @@
 
     template<typename type>
     EVO_TRAINER<type>::~EVO_TRAINER(){
-        for (auto& network : networks) {
+        for(auto& network : networks) {
             delete network;
         }
         networks.clear();
@@ -756,7 +774,7 @@
                     if(to_add_n){
                         networks[nn]->addNeuron(l);
                     }
-                    else if (networks[nn]->layers[l].neurons.size() > 1){
+                    else if(networks[nn]->layers[l].neurons.size() > 1){
                         networks[nn]->deleteNeuron(l);
                     }
                     for(unsigned int n = 0; n < networks[nn]->layers[l].neurons.size(); n++){
@@ -796,7 +814,7 @@
 
     template<typename type>
     void EVO_TRAINER<type>::re_init(const unsigned int n_of_networks, const std::vector<unsigned int>& structure, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type(*actHID)(type), type(*actOUT)(type), type (*fitnessp)(ANN<type>& net), type re_structure_constant){
-        for (auto& network : networks) {
+        for(auto& network : networks) {
             delete network;
         }
         networks.clear();      
@@ -810,7 +828,7 @@
 
     template<typename type>
     void EVO_TRAINER<type>::re_init(const unsigned int n_of_networks, const ANN<type>& template_ANN, type (*fitnessp)(ANN<type>& net), type mutate_rate, type re_structure_constant){
-        for (auto& network : networks) {
+        for(auto& network : networks) {
             delete network;
         }
         networks.clear();
