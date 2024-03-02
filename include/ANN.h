@@ -27,7 +27,7 @@
             struct NEURON;
             struct LAYER;
             struct ResidualWeight;
-            void initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons);
+            void initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights);
             std::vector<type> costvec(const std::vector<type>& target, unsigned int l);
             std::vector<LAYER> layers;
             NEURON& IDtoN(NeuronID nID);
@@ -36,7 +36,7 @@
 
         public:
 
-            ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
+            ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
             ANN(std::string filename, bool isBIN, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type));
             ANN(const ANN<type>& net);
             ANN() = default;
@@ -63,8 +63,8 @@
     };
 
     template<typename type>
-    ANN<type>::ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons, type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
-        initialize(layern, ResWeights, Rec_Neurons);
+    ANN<type>::ANN(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights,type (*actfuncHIDp)(type), type (*actfuncOUTp)(type)){
+        initialize(layern, ResWeights);
         actfuncHID = actfuncHIDp;
         actfuncOUT = actfuncOUTp;
     }
@@ -100,7 +100,6 @@
                     layers[l].neurons[n].resWeights.push_back(net.layers[l].neurons[n].resWeights[r]);
                 }
                 layers[l].neurons[n].bias = net.layers[l].neurons[n].bias;
-                layers[l].neurons[n].is_Rec = net.layers[l].neurons[n].is_Rec;
             }
         }
     }
@@ -111,7 +110,7 @@
     }
 
     template<typename type>
-    void ANN<type>::initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights, const std::vector<NeuronID>& Rec_Neurons){
+    void ANN<type>::initialize(const std::vector<unsigned int>& layern, const std::vector<std::pair<NeuronID, NeuronID>>& ResWeights){
         assert(layern.size() >= 2);
         std::srand((clock()+time(NULL))/2);
         layers.clear();
@@ -121,9 +120,6 @@
         }
         for(auto& r : ResWeights){
             AddResidualWeight(r.first, r.second, 1.0f);
-        }
-        for(auto& n : Rec_Neurons){
-            IDtoN(n).is_Rec = true;
         }
     }
 
@@ -216,10 +212,6 @@
                 w = atof(tmp.c_str());
                 layers[l].neurons[n].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
             }
-            std::getline(input, tmp, ',');
-            layers[l].neurons[n].is_Rec = (tmp == "0") ? false : true;
-            std::getline(input, tmp, ',');
-            layers[l].neurons[n].Rec_weight = tmp;
         }
         input.clear();
         file.close();
@@ -245,11 +237,10 @@
                 }
                 file << "," + std::to_string(layers[l].neurons[n].bias);
                 unsigned int s_of_r = layers[l].neurons[n].resWeights.size();
-                file << "," + std::to_string(s_of_r) + ",";
+                file << "," + std::to_string(s_of_r);
                 for(unsigned int r = 0; r < s_of_r; r++){
-                    file << std::to_string(layers[l].neurons[n].resWeights[r].from.l) + "," + std::to_string(layers[l].neurons[n].resWeights[r].from.n) + "," + std::to_string(layers[l].neurons[n].resWeights[r].weight) + ",";
+                    file << "," << std::to_string(layers[l].neurons[n].resWeights[r].from.l) + "," + std::to_string(layers[l].neurons[n].resWeights[r].from.n) + "," + std::to_string(layers[l].neurons[n].resWeights[r].weight);
                 }
-                file << layers[l].neurons[n].is_Rec << "," << layers[l].neurons[n].Rec_weight;
                 file << "\n";
             }
         }
@@ -294,8 +285,6 @@
 
                 layers[layerid].neurons[neuronid].resWeights.push_back(ResidualWeight(NeuronID(l, n), w));
             }
-            file.read(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].is_Rec), sizeof(bool));
-            file.read(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].Rec_weight), sizeof(type));
         }
         file.close();
     }
@@ -334,8 +323,6 @@
                     file.write(reinterpret_cast<char*>(&nf), sizeof(int));
                     file.write(reinterpret_cast<char*>(&w), sizeof(type));
                 }
-                file.write(reinterpret_cast<char*>(&layers[l].neurons[n].is_Rec), sizeof(bool));
-                file.write(reinterpret_cast<char*>(&layers[layerid].neurons[neuronid].Rec_weight), sizeof(type));
             }
         }
         file.close();
@@ -579,8 +566,6 @@
         type bias = 0.0f;
         unsigned int currentID = 0;
         type activation = 0.0f;
-        bool is_Rec = 0;
-        type Rec_weight; 
         std::vector<type> outweights;
         std::vector<ResidualWeight> resWeights;
         NEURON() = default;
@@ -601,7 +586,6 @@
         for(type& i : outweights)
             i = 2*rand()/(type)RAND_MAX;
         bias = 2*rand()/(type)RAND_MAX;
-        Rec_weight = 2*rand()/(type)RAND_MAX;
     }
 
     template<typename type> 
@@ -649,12 +633,7 @@
     template<typename type>
     void ANN<type>::LAYER::calcActs(type(actfunc)(type)){
         for(auto& n : belong_to->layers[curr_l].neurons){
-            if(n.is_Rec){
-                n.activation = n.activation * n.Rec_weight;
-            }
-            else{
-                n.activation = 0.0f;
-            }
+            n.activation = 0.0f;
             for(auto& np : belong_to->layers[curr_l-1].neurons){
                 n.activation += np.outweights[n.currentID]*np.activation;
             }
