@@ -644,6 +644,9 @@ template <typename type> EVO_TRAINER<type>::~EVO_TRAINER() {
 
 template <typename type> void EVO_TRAINER<type>::mutate(const ANN<type> &net, type mutate_rate) {
 	for(auto &nn : networks) {
+		if(&net == nn) {
+			continue;
+		}
 		for(unsigned int l = 0; l < nn->layers.size() && l < net.layers.size(); l++) {
 			for(unsigned int n = 0; n < nn->layers[l].neurons.size() && n < net.layers[l].neurons.size(); n++) {
 				for(unsigned int w = 0; w < nn->layers[l].neurons[n].outweights.size() && w < net.layers[l].neurons[n].outweights.size(); w++) {
